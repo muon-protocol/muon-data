@@ -1,32 +1,37 @@
-package net.muon.data.core;
+package net.muon.data.app;
 
 import com.google.gdata.util.common.base.Preconditions;
+import net.muon.data.binance.BinanceSource;
+import net.muon.data.core.CryptoQuote;
+import net.muon.data.core.CryptoSource;
+import net.muon.data.core.Quote;
+import net.muon.data.core.QuoteService;
+import net.muon.data.kucoin.KucoinSource;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
-//@Service
-//@Validated
+@Service
+@Validated
 public class CryptoQuoteService extends QuoteService<CryptoQuote, CryptoSource>
 {
-
     private final Integer ignorePriceIfOlderThanMillis;
 
-    public CryptoQuoteService(/*@Value("${crypto.quote.skip-prices-milisec-age:}")*/ Integer ignorePriceIfOlderThanMillis,
-                                                                                     Collection<CryptoSource> sources)
+    public CryptoQuoteService(@Value("${crypto.quote.skip-prices-milisec-age:}") Integer ignorePriceIfOlderThanMillis,
+                              Collection<CryptoSource> sources)
     {
         super(sources, LoggerFactory.getLogger(CryptoQuoteService.class));
         this.ignorePriceIfOlderThanMillis = ignorePriceIfOlderThanMillis;
     }
 
     @Override
-    public CryptoQuote getQuote(/*@NotNull */String symbol, String... exchanges)
+    public CryptoQuote getQuote(String symbol, String... exchanges)
     {
         List<Quote> quotes = new ArrayList<>();
         Collection<CryptoSource> enabledSources = getSources(false, exchanges);
@@ -35,16 +40,15 @@ public class CryptoQuoteService extends QuoteService<CryptoQuote, CryptoSource>
                 .filter(Objects::nonNull)
                 .forEachOrdered(quotes::add);
         if (quotes.isEmpty()) {
-            return null; // FIXME
-//            LOGGER.warn("Symbol {} not found", symbol);
-//            Optional<CryptoSource> proxy = enabledSources.stream()
-//                    .filter(s -> s instanceof BinanceSource || s instanceof KucoinSource)
-//                    .findFirst();
-//            if (proxy.isEmpty()) {
-//                return null;
-//            }
-//            LOGGER.warn("Loading {} with rest api", symbol);
-//            return proxy.get().load(symbol);
+            LOGGER.warn("Symbol {} not found", symbol);
+            Optional<CryptoSource> proxy = enabledSources.stream()
+                    .filter(s -> s instanceof BinanceSource || s instanceof KucoinSource)
+                    .findFirst();
+            if (proxy.isEmpty()) {
+                return null;
+            }
+            LOGGER.warn("Loading {} with rest api", symbol);
+            return proxy.get().load(symbol);
         }
         return avg(quotes);
     }

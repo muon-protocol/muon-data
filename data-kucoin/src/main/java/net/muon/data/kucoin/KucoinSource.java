@@ -20,8 +20,6 @@ import java.net.http.HttpResponse;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-//@Component
-//@ConditionalOnProperty(prefix = "kucoin", name = "disabled", havingValue = "false", matchIfMissing = true)
 public class KucoinSource extends CryptoSource
 {
     private WebSocketClient client;
@@ -29,11 +27,8 @@ public class KucoinSource extends CryptoSource
     private final ObjectMapper mapper;
     private boolean singleSubscriptionMode = false;
 
-    public KucoinSource(Ignite ignite,
-                        ObjectMapper mapper,
-            /*@Value("${exchanges:}")*/ Optional<List<String>> exchanges,
-            /*@Value("${kucoin.symbols:}")*/ Optional<List<String>> symbols,
-                        List<QuoteChangeListener> changeListeners)
+    public KucoinSource(Ignite ignite, ObjectMapper mapper, List<String> exchanges,
+                        List<String> symbols, List<QuoteChangeListener> changeListeners)
     {
         super("kucoin", exchanges, ignite, symbols, changeListeners, null, null);
         this.mapper = mapper;

@@ -11,10 +11,8 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.utils.ObjectMapperHelper;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public abstract class CryptoSource extends Source<CryptoQuote>
 {
@@ -22,21 +20,12 @@ public abstract class CryptoSource extends Source<CryptoQuote>
     protected final String secret;
     protected StreamingExchange exchange;
     protected ProductSubscription subscription;
-    protected Disposable subsciptionDisposable;
+    protected Disposable subscriptionDisposable;
 
-    public CryptoSource(String id,
-                        Optional<List<String>> exchanges,
-                        Ignite ignite,
-                        Optional<List<String>> symbols,
-                        List<QuoteChangeListener> changeListeners,
-                        String apiKey,
-                        String secret)
+    public CryptoSource(String id, List<String> exchanges, Ignite ignite, List<String> symbols,
+                        List<QuoteChangeListener> changeListeners, String apiKey, String secret)
     {
-        super(id,
-                exchanges.isPresent() ? exchanges.get() : Collections.EMPTY_LIST,
-                ignite,
-                symbols.isPresent() ? symbols.get() : Collections.EMPTY_LIST,
-                changeListeners);
+        super(id, exchanges, ignite, symbols, changeListeners);
         this.apiKey = apiKey;
         this.secret = secret;
     }
@@ -76,7 +65,7 @@ public abstract class CryptoSource extends Source<CryptoQuote>
                 subscribe();
             }
         });
-        subsciptionDisposable = connection.subscribe();
+        subscriptionDisposable = connection.subscribe();
     }
 
     protected StreamingExchange createExchange(Class<? extends StreamingExchange> clazz)
@@ -128,8 +117,8 @@ public abstract class CryptoSource extends Source<CryptoQuote>
     public void disconnect()
     {
         try {
-            if (subsciptionDisposable != null) {
-                subsciptionDisposable.dispose();
+            if (subscriptionDisposable != null) {
+                subscriptionDisposable.dispose();
             }
         } catch (Exception e) {
             LOGGER.warn("Failed to dispose subscription", e);

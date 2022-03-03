@@ -31,17 +31,15 @@ public abstract class QuoteService<Q extends Quote, S extends Source<Q>>
         Collection<S> enabledSources = getSources(false);
         LOGGER.info("All available sources are {}", sources);
         LOGGER.info("Enabled sources are {}", enabledSources);
-        enabledSources.forEach(source -> {
-            executor.submit(() -> {
-                try {
-                    LOGGER.info("{} trying to connect", source.getId());
-                    source.connect();
-                } catch (RuntimeException e) {
-                    source.forceDisable();
-                    LOGGER.warn("Exception suppressed when {} was connecting", source.getId(), e);
-                }
-            });
-        });
+        enabledSources.forEach(source -> executor.submit(() -> {
+            try {
+                LOGGER.info("{} trying to connect", source.getId());
+                source.connect();
+            } catch (RuntimeException e) {
+                source.forceDisable();
+                LOGGER.warn("Exception suppressed when {} was connecting", source.getId(), e);
+            }
+        }));
     }
 
     public List<Q> getAll(String... exchanges)
@@ -53,7 +51,7 @@ public abstract class QuoteService<Q extends Quote, S extends Source<Q>>
 
     public Collection<S> getSources(boolean all, String... exchanges)
     {
-        List<String> xchanges = exchanges == null ? Collections.EMPTY_LIST : Arrays.asList(exchanges);
+        List<String> xchanges = exchanges == null ? Collections.emptyList() : Arrays.asList(exchanges);
         if (all) {
             return Collections.unmodifiableCollection(sources);
         }

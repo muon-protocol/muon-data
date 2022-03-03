@@ -1,0 +1,20 @@
+# Limit supported exchanges; Default value is * for all available exchanges (binance,kucoin)
+exchanges=*
+
+# When calculating average-prices skip prices older than 10_000 milliseconds
+crypto.quote.skip-prices-milisec-age=10000
+
+# Disable binance
+binance.disabled=false
+# Limit all supported currency pairs for binance if required.
+# binance.symbols=*
+# Set api key for binance if required
+binance.api-key=
+# Set secret key for binance if required
+binance.secret=
+
+ignite-client-address=127.0.0.1:47500
+logging.level.com.vitamin=DEBUG
+logging.file.path=./logs
+logging.level.org.apache.ignite=INFO
+logging.config=./config/logback-spring.xml.sample
