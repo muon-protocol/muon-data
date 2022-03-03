@@ -25,6 +25,7 @@
         <module>data-binance</module>
         <module>data-kucoin</module>
         <module>data-app</module>
+        <module>data-nft</module>
     </modules>
 
 </project>
