@@ -2,11 +2,14 @@ package net.muon.data.nft;
 
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
+import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.tx.ReadonlyTransactionManager;
 import org.web3j.tx.gas.DefaultGasProvider;
 
+import java.io.IOException;
 import java.math.BigInteger;
+import java.util.Optional;
 
 public class ContractTest
 {
@@ -16,27 +19,29 @@ public class ContractTest
     private static final OpenseaWyvernExchange opensea = OpenseaWyvernExchange.load(OPENSEA_CONTRACT_ADDRESS, web3j, new ReadonlyTransactionManager(web3j, OPENSEA_CONTRACT_ADDRESS), new DefaultGasProvider());
 
     private static final String BORED_APE_COLLECTION_CONTRACT_ADDRESS = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
-    private static final ERC721 boredApe = ERC721.load(BORED_APE_COLLECTION_CONTRACT_ADDRESS, web3j, new ReadonlyTransactionManager(web3j, BORED_APE_COLLECTION_CONTRACT_ADDRESS), new DefaultGasProvider());
+    private static final ERC721Ex boredApe = ERC721Ex.load(BORED_APE_COLLECTION_CONTRACT_ADDRESS, web3j, new ReadonlyTransactionManager(web3j, BORED_APE_COLLECTION_CONTRACT_ADDRESS), new DefaultGasProvider());
 
-    public static void main(String[] args)
+    public static void main(String[] args) throws IOException
     {
 //        testOpensea();
         testErc721();
     }
 
-    private static void testErc721()
+    private static void testErc721() throws IOException
     {
-        boredApe.transferEventFlowable(DefaultBlockParameter.valueOf(BigInteger.valueOf(13907660)),
-                DefaultBlockParameter.valueOf(BigInteger.valueOf(13907660))).subscribe(transferEventResponse -> {
-            System.out.println(transferEventResponse.log.getTransactionHash() + ": " + transferEventResponse.tokenId);
-        });
+        var transferLogs = boredApe.getTransferEvents(DefaultBlockParameter.valueOf(BigInteger.valueOf(14332848)),
+                DefaultBlockParameter.valueOf(BigInteger.valueOf(14333057)));
+        for (var l : transferLogs) {
+            System.out.printf("%s: %s%n", l.log.getTransactionHash(), l.tokenId);
+        }
     }
 
-    private static void testOpensea()
+    private static void testOpensea() throws IOException
     {
-        opensea.ordersMatchedEventFlowable(DefaultBlockParameter.valueOf(BigInteger.valueOf(14232064)),
-                DefaultBlockParameter.valueOf(BigInteger.valueOf(14232064))).subscribe(ordersMatchedEventResponse -> {
-            System.out.println(ordersMatchedEventResponse.log.getTransactionHash() + ": " + ordersMatchedEventResponse.price);
-        });
+        Optional<TransactionReceipt> transactionReceipt =
+                web3j.ethGetTransactionReceipt("0xaf8ac4969f56148ae37d9603e59a32a79a69c36c0792b50a1d3dd77953cb246c").send().getTransactionReceipt();
+        if (transactionReceipt.isPresent()) {
+            var logs = opensea.getOrdersMatchedEvents(transactionReceipt.get());
+        }
     }
 }
