@@ -10,4 +10,50 @@
     </parent>
 
     <artifactId>data-nft</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.web3j</groupId>
+            <artifactId>crypto</artifactId>
+            <version>4.8.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.web3j</groupId>
+            <artifactId>core</artifactId>
+            <version>4.8.7</version>
+            <!--            https://stackoverflow.com/questions/68919728/java-lang-nullpointerexception-at-org-web3j-protocol-core-filters-logfilter-proc-->
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.9.1</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.web3j</groupId>
+                <artifactId>web3j-maven-plugin</artifactId>
+                <version>4.8.2</version>
+                <configuration>
+                    <packageName>net.muon.data.nft</packageName>
+                    <sourceDestination>src/main/java</sourceDestination>
+                    <nativeJavaType>true</nativeJavaType>
+                    <outputFormat>java</outputFormat>
+                    <abiSourceFiles>
+                        <directory>src/main/resources/abi</directory>
+                        <includes>
+                            <include>/*.json</include>
+                        </includes>
+                    </abiSourceFiles>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>
