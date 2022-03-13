@@ -1,7 +1,6 @@
 package net.muon.data.nft;
 
-import net.muon.data.nft.contract.ERC721Ex;
-import net.muon.data.nft.contract.OpenseaWyvernExchange;
+import com.google.common.base.Preconditions;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
@@ -11,47 +10,40 @@ import org.slf4j.LoggerFactory;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.http.HttpService;
-import org.web3j.tx.ReadonlyTransactionManager;
-import org.web3j.tx.gas.DefaultGasProvider;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 public class NftService
 {
+    protected static final BigDecimal ETH_IN_WEI = BigDecimal.valueOf(1000000000000000000L);
     private static final Logger LOGGER = LoggerFactory.getLogger(NftService.class);
-    private static final String OPENSEA_CONTRACT_ADDRESS = "0x7be8076f4ea4a4ad08075c2508e481d6c946d12b";
-    private static final BigInteger ALLOWED_BLOCK_HEIGHT = BigInteger.valueOf(10000);
+    private static final Set<String> OPENSEA_EXCHANGES = Set.of("0x7be8076f4ea4a4ad08075c2508e481d6c946d12b", "0x7f268357a8c2552623316e2562d90e642bb538e5");
     private static final String PRICE_CACHE = "nft_token_price_cache";
     private static final String LATEST_BLOCK_CACHE = "nft_token_latest_processed_block_cache";
     private static final String LATEST_BLOCK = "latest_block";
-    protected static final BigDecimal ETH_IN_WEI = BigDecimal.valueOf(1000000000000000000L);
     private static final MathContext PRECISION = new MathContext(5);
-
-
-    private final Web3j web3;
-    private final ERC721Ex erc721;
-    private final OpenseaWyvernExchange opensea;
-    private final List<String> collections;
     protected final IgniteCache<String, Map<BigInteger, TokenPrice>> priceCache; // collection:tokenId -> blockNumber -> TokenPrice (price, avg, count)
     protected final IgniteCache<String, BigInteger> latestProcessedBlockCache;
-
-    private BigInteger nextBlockNumber;
+    private final Web3j web3;
+    private final OpenseaSale openseaSale;
+    protected BigInteger nextBlockNumber;
+    private BigInteger allowedBlockHeight = BigInteger.valueOf(10000);
 
     public NftService(String web3Provider, BigInteger startingBlockNumber, Set<String> collections, Ignite ignite)
     {
-
-        this.collections = collections.stream().map(a -> a.toLowerCase(Locale.ROOT)).distinct().collect(Collectors.toList());
+        Preconditions.checkArgument(collections != null && !collections.isEmpty());
         web3 = Web3j.build(new HttpService(web3Provider));
-        opensea = OpenseaWyvernExchange.load(OPENSEA_CONTRACT_ADDRESS, web3, new ReadonlyTransactionManager(web3, OPENSEA_CONTRACT_ADDRESS), new DefaultGasProvider());
-        erc721 = ERC721Ex.load(this.collections.get(0), web3, new ReadonlyTransactionManager(web3, this.collections.get(0)), new DefaultGasProvider()); // FIXME
+        openseaSale = new OpenseaSale(OPENSEA_EXCHANGES, collections, web3);
 
         var config = new CacheConfiguration<String, Map<BigInteger, TokenPrice>>(PRICE_CACHE);
-        config.setCacheMode(CacheMode.REPLICATED); // FIXME ?
+        config.setCacheMode(CacheMode.REPLICATED);
         this.priceCache = ignite.getOrCreateCache(config);
 
         var latestBlockConfig = new CacheConfiguration<String, BigInteger>(LATEST_BLOCK_CACHE);
@@ -61,13 +53,18 @@ public class NftService
         nextBlockNumber = startingBlockNumber.max(getCacheLastProcessedBlockNumber().add(BigInteger.ONE));
     }
 
+    private static String getTokenIdentifier(String collection, BigInteger id)
+    {
+        return String.format("%s:%s", collection.toLowerCase(Locale.ROOT), id.toString());
+    }
+
     private BigInteger getCacheLastProcessedBlockNumber()
     {
         var latestBlock = latestProcessedBlockCache.get(LATEST_BLOCK);
         return latestBlock != null ? latestBlock : BigInteger.ZERO;
     }
 
-    // TODO: schedule
+    //    @Scheduled(initialDelay = 2000, fixedDelay = 5000) TODO
     public void ScanSales()
     {
         BigInteger currentBlockNumber;
@@ -77,15 +74,19 @@ public class NftService
             LOGGER.warn("Exception suppressed", e);
             return;
         }
+        ScanSalesTo(currentBlockNumber);
+    }
 
-        if (currentBlockNumber.compareTo(nextBlockNumber) < 0)
+    protected void ScanSalesTo(BigInteger toBlock)
+    {
+        if (toBlock.compareTo(nextBlockNumber) < 0)
             return;
 
         if (LOGGER.isDebugEnabled())
             LOGGER.debug("Scanning sale events");
 
         try {
-            handleSaleLogs(nextBlockNumber, currentBlockNumber);
+            handleSaleLogs(nextBlockNumber, toBlock);
         } catch (IOException e) {
             LOGGER.warn("Exception suppressed", e);
         }
@@ -93,26 +94,29 @@ public class NftService
 
     void handleSaleLogs(BigInteger fromBlock, BigInteger toBlock) throws IOException
     {
-        do {
-            for (var transferLog : erc721.getTransferEvents(DefaultBlockParameter.valueOf(fromBlock),
-                    DefaultBlockParameter.valueOf(toBlock.min(fromBlock.add(ALLOWED_BLOCK_HEIGHT))), collections)) {
-                var transactionReceipt = web3.ethGetTransactionReceipt(transferLog.log.getTransactionHash()).send().getTransactionReceipt();
-                if (transactionReceipt.isPresent()) {
-                    var ordersMatchedLogs = opensea.getOrdersMatchedEvents(transactionReceipt.get());
-                    if (ordersMatchedLogs.size() != 1) continue;
-                    AddPriceRecord(ordersMatchedLogs.get(0).price, transferLog.log.getBlockNumber(),
-                            transferLog.tokenId, transferLog.log.getAddress().toLowerCase(Locale.ROOT));
-                    UpdateNextBlockNumber(transferLog.log.getBlockNumber());
+        try {
+            do {
+                for (var saleLog : openseaSale.getEvents(DefaultBlockParameter.valueOf(fromBlock),
+                        DefaultBlockParameter.valueOf(toBlock.min(fromBlock.add(allowedBlockHeight))))) {
+                    var blockNumber = saleLog.transfer.log.getBlockNumber();
+                    addPriceRecord(saleLog.ordersMatched.price, blockNumber, saleLog.transfer.tokenId, saleLog.transfer.log.getAddress());
+                    updateNextBlockNumber(blockNumber);
                 }
+                fromBlock = fromBlock.add(allowedBlockHeight);
             }
-            fromBlock = fromBlock.add(ALLOWED_BLOCK_HEIGHT);
+            while (toBlock.subtract(fromBlock).compareTo(BigInteger.ZERO) > 0);
+        } catch (OpenseaSale.TooManyLogsException e) {
+            if (allowedBlockHeight.compareTo(BigInteger.TWO) > 0) {
+                allowedBlockHeight = allowedBlockHeight.divide(BigInteger.TWO);
+                LOGGER.debug("Allowed block height updated to {}", allowedBlockHeight);
+            }
+            throw e;
         }
-        while (toBlock.subtract(fromBlock).compareTo(BigInteger.ZERO) > 0);
     }
 
-    protected void AddPriceRecord(BigInteger price, BigInteger blockNumber, BigInteger tokenId, String collection) // TODO: add average price cache
+    protected void addPriceRecord(BigInteger price, BigInteger blockNumber, BigInteger tokenId, String collection)
     {
-        var collectionToken = GetTokenIdentifier(collection, tokenId);
+        var collectionToken = getTokenIdentifier(collection, tokenId);
 
         var previousBlock = latestProcessedBlockCache.get(collectionToken);
         if (previousBlock == null) {
@@ -134,7 +138,7 @@ public class NftService
         latestProcessedBlockCache.put(collectionToken, blockNumber);
     }
 
-    private void UpdateNextBlockNumber(BigInteger blockNumber)
+    private void updateNextBlockNumber(BigInteger blockNumber)
     {
         nextBlockNumber = blockNumber.add(BigInteger.ONE);
         latestProcessedBlockCache.put(LATEST_BLOCK, blockNumber);
@@ -142,20 +146,15 @@ public class NftService
 
     public BigDecimal getPrice(String collectionId, BigInteger nftId)
     {
-        var collectionToken = GetTokenIdentifier(collectionId, nftId);
+        var collectionToken = getTokenIdentifier(collectionId, nftId);
         var latestBlock = latestProcessedBlockCache.get(collectionToken);
         if (latestBlock == null)
-            return null; // TODO: no sale records
+            return null;
 
         var priceMap = priceCache.get(collectionToken); // TODO: null check?
         var latestRecord = priceMap.get(latestBlock);
 
         return new BigDecimal(latestRecord.getCumulativePrice()).divide(new BigDecimal(latestRecord.getCount()), PRECISION)
                 .divide(ETH_IN_WEI, PRECISION);
-    }
-
-    private static String GetTokenIdentifier(String collection, BigInteger id)
-    {
-        return String.format("%s:%s", collection.toLowerCase(Locale.ROOT), id.toString());
     }
 }
