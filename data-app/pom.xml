@@ -42,6 +42,12 @@
         </dependency>
 
         <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-nft</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-ui</artifactId>
             <version>${openapi.version}</version>

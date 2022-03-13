@@ -1,4 +1,4 @@
-package net.muon.data.nft;
+package net.muon.data.nft.contract;
 
 import io.reactivex.Flowable;
 import java.math.BigInteger;

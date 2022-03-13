@@ -16,16 +16,15 @@
     <packaging>pom</packaging>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <java.version>11</java.version>
     </properties>
 
     <modules>
         <module>data-core</module>
         <module>data-binance</module>
         <module>data-kucoin</module>
-        <module>data-app</module>
         <module>data-nft</module>
+        <module>data-app</module>
     </modules>
 
 </project>

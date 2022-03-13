@@ -13,6 +13,16 @@
 
     <dependencies>
         <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-core</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.mizosoft.methanol</groupId>
+            <artifactId>methanol</artifactId>
+            <version>1.6.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.web3j</groupId>
             <artifactId>crypto</artifactId>
             <version>4.8.7</version>
@@ -28,14 +38,16 @@
             <artifactId>okhttp</artifactId>
             <version>4.9.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.8.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
             <plugin>
                 <groupId>org.web3j</groupId>
                 <artifactId>web3j-maven-plugin</artifactId>
@@ -46,7 +58,7 @@
                     <nativeJavaType>true</nativeJavaType>
                     <outputFormat>java</outputFormat>
                     <abiSourceFiles>
-                        <directory>src/main/resources/abi</directory>
+                        <directory>src/main/resources/net/muon/data/nft/abi</directory>
                         <includes>
                             <include>/*.json</include>
                         </includes>

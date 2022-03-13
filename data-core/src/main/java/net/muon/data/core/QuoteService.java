@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public abstract class QuoteService<Q extends Quote, S extends Source<Q>>
 {
@@ -46,7 +47,7 @@ public abstract class QuoteService<Q extends Quote, S extends Source<Q>>
     {
         return getSources(false, exchanges)
                 .stream()
-                .flatMap(source -> source.getAll().stream()).toList();
+                .flatMap(source -> source.getAll().stream()).collect(Collectors.toList());
     }
 
     public Collection<S> getSources(boolean all, String... exchanges)
@@ -58,6 +59,6 @@ public abstract class QuoteService<Q extends Quote, S extends Source<Q>>
         return Collections.unmodifiableCollection(sources
                 .stream()
                 .filter(source -> xchanges.isEmpty() || xchanges.contains(source.getId()))
-                .filter(Source::isEnabled).toList());
+                .filter(Source::isEnabled).collect(Collectors.toList()));
     }
 }

@@ -1,4 +1,4 @@
-package net.muon.data.nft;
+package net.muon.data.nft.contract;
 
 import org.web3j.abi.EventEncoder;
 import org.web3j.protocol.Web3j;
@@ -11,6 +11,7 @@ import org.web3j.tx.gas.ContractGasProvider;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ERC721Ex extends ERC721
 {
@@ -21,8 +22,8 @@ public class ERC721Ex extends ERC721
 
     private TransferEventResponse decodeTransferEvent(Log log)
     {
-        EventValuesWithLog eventValues = extractEventParametersWithLog(TRANSFER_EVENT, log);
-        TransferEventResponse typedResponse = new TransferEventResponse();
+        var eventValues = extractEventParametersWithLog(TRANSFER_EVENT, log);
+        var typedResponse = new TransferEventResponse();
         typedResponse.log = log;
         typedResponse.from = (String) eventValues.getIndexedValues().get(0).getValue();
         typedResponse.to = (String) eventValues.getIndexedValues().get(1).getValue();
@@ -30,11 +31,11 @@ public class ERC721Ex extends ERC721
         return typedResponse;
     }
 
-    public List<TransferEventResponse> getTransferEvents(DefaultBlockParameter startBlock, DefaultBlockParameter endBlock) throws IOException
+    public List<TransferEventResponse> getTransferEvents(DefaultBlockParameter startBlock, DefaultBlockParameter endBlock, List<String> contracts) throws IOException
     {
-        var filter = new EthFilter(startBlock, endBlock, getContractAddress());
+        var filter = new EthFilter(startBlock, endBlock, contracts);
         filter.addSingleTopic(EventEncoder.encode(TRANSFER_EVENT));
-        return web3j.ethGetLogs(filter).send().getLogs().stream().map(logResult -> decodeTransferEvent((Log) logResult)).toList();
+        return web3j.ethGetLogs(filter).send().getLogs().stream().map(logResult -> decodeTransferEvent((Log) logResult)).collect(Collectors.toList());
     }
 
     public static ERC721Ex load(String contractAddress, Web3j web3j, TransactionManager transactionManager, ContractGasProvider contractGasProvider)
