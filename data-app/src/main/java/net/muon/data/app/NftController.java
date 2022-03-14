@@ -1,6 +1,7 @@
 package net.muon.data.app;
 
 import net.muon.data.nft.NftService;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,5 +25,11 @@ public class NftController
     public BigDecimal getPrice(@PathVariable("collection-id") String collectionId, @PathVariable("nft-id") BigInteger nftId) // FIXME ?
     {
         return nftService.getPrice(collectionId, nftId);
+    }
+
+    @Scheduled(initialDelay = 2000, fixedDelay = 15000)
+    public void scanSales()
+    {
+        nftService.scanSales();
     }
 }

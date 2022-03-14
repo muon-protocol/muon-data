@@ -128,12 +128,13 @@ public class KucoinSource extends CryptoSource
         }
     }
 
+    private static PropertyPathValueResolver resolver = new PropertyPathValueResolver();
+
     private class WebSocketClient extends org.java_websocket.client.WebSocketClient
     {
         private final Map<String, Object> bullet;
         private final Integer pingInterval;
         private Timer timer;
-        private static PropertyPathValueResolver resolver = new PropertyPathValueResolver();
 
         public WebSocketClient(Map<String, Object> bullet)
         {

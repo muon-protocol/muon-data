@@ -15,7 +15,7 @@ public class NftConfiguration
     @Bean
     public NftService nftService(@Value("${web3.provider}") String web3Provider,
                                  @Value("${nft.starting-block-number}") BigInteger startingBlockNumber,
-                                 @Value("${collections}") Set<String> collections, Ignite ignite)
+                                 @Value("${nft.collections}") Set<String> collections, Ignite ignite)
     {
         return new NftService(web3Provider, startingBlockNumber, collections, ignite);
     }

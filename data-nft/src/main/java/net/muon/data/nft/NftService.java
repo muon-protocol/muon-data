@@ -64,8 +64,7 @@ public class NftService
         return latestBlock != null ? latestBlock : BigInteger.ZERO;
     }
 
-    //    @Scheduled(initialDelay = 2000, fixedDelay = 5000) TODO
-    public void ScanSales()
+    public void scanSales()
     {
         BigInteger currentBlockNumber;
         try {
@@ -74,10 +73,10 @@ public class NftService
             LOGGER.warn("Exception suppressed", e);
             return;
         }
-        ScanSalesTo(currentBlockNumber);
+        scanSalesTo(currentBlockNumber);
     }
 
-    protected void ScanSalesTo(BigInteger toBlock)
+    protected void scanSalesTo(BigInteger toBlock)
     {
         if (toBlock.compareTo(nextBlockNumber) < 0)
             return;
@@ -125,14 +124,14 @@ public class NftService
             priceCache.put(collectionToken, priceMap);
             latestProcessedBlockCache.put(collectionToken, blockNumber);
 
-            LOGGER.debug("{}: first record inserted", collectionToken);
+            LOGGER.debug("{}: first record inserted (price: {})", collectionToken, price);
         } else {
             var priceMap = priceCache.get(collectionToken);
             var previousPrice = priceMap.get(previousBlock); // TODO: null check?
             priceMap.put(blockNumber, previousPrice.CalculateNext(price));
             priceCache.put(collectionToken, priceMap);
 
-            LOGGER.debug("{}: record number {} inserted", collectionToken, priceMap.size());
+            LOGGER.debug("{}: record number {} inserted (price: {})", collectionToken, priceMap.size(), price);
         }
 
         latestProcessedBlockCache.put(collectionToken, blockNumber);

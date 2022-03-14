@@ -9,6 +9,7 @@ import org.web3j.abi.datatypes.generated.Bytes32;
 import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
+import org.web3j.protocol.core.Response;
 import org.web3j.protocol.core.methods.request.EthFilter;
 import org.web3j.protocol.core.methods.response.BaseEventResponse;
 import org.web3j.protocol.core.methods.response.Log;
@@ -49,7 +50,7 @@ public class OpenseaSale extends Contract
         filter.addSingleTopic(TRANSFER_EVENT_ENCODED);
         var ethLogsResult = web3j.ethGetLogs(filter).send();
         if (ethLogsResult.hasError())
-            throw new TooManyLogsException(); // FIXME
+            throw createLogRequestError(ethLogsResult.getError());
         return ethLogsResult.getLogs().stream().map(logResult -> decodeTransferEvent(((Log) logResult))).collect(Collectors.toList());
     }
 
@@ -61,8 +62,15 @@ public class OpenseaSale extends Contract
         filter.addOptionalTopics(takers);
         var ethLogsResult = web3j.ethGetLogs(filter).send();
         if (ethLogsResult.hasError())
-            throw new TooManyLogsException(); // FIXME
+            throw createLogRequestError(ethLogsResult.getError());
         return ethLogsResult.getLogs().stream().map(logResult -> decodeOrdersMatchedEvent(((Log) logResult))).collect(Collectors.toList());
+    }
+
+    private IOException createLogRequestError(Response.Error error)
+    {
+        if (error.getMessage().contains("more than 10000"))
+            return new TooManyLogsException(error.getMessage());
+        return new IOException(error.getMessage());
     }
 
     public List<SaleEventResponse> getEvents(DefaultBlockParameter startBlock, DefaultBlockParameter endBlock) throws IOException
@@ -137,6 +145,9 @@ public class OpenseaSale extends Contract
 
     public class TooManyLogsException extends IOException
     {
-
+        public TooManyLogsException(String message)
+        {
+            super(message);
+        }
     }
 }

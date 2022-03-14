@@ -20,18 +20,6 @@ public class NftServiceTest
     private static final String STORAGE_PATH = "/tmp"; // FIXME
     private static final Ignite ignite = getIgnite();
 
-    private static Ignite getIgnite()
-    {
-        IgniteConfiguration cfg = new IgniteConfiguration();
-        DataStorageConfiguration storageCfg = new DataStorageConfiguration();
-        storageCfg.getDefaultDataRegionConfiguration().setPersistenceEnabled(true);
-        storageCfg.setStoragePath(STORAGE_PATH);
-        cfg.setDataStorageConfiguration(storageCfg);
-        Ignite ignite = Ignition.start(cfg);
-        ignite.cluster().state(ClusterState.ACTIVE);
-        return ignite;
-    }
-
     @Test
     public void test() throws IOException
     {
@@ -55,7 +43,7 @@ public class NftServiceTest
         var end = BigInteger.valueOf(13167727);
 
         while (nftService.nextBlockNumber.compareTo(end) <= 0) {
-            nftService.ScanSalesTo(end);
+            nftService.scanSalesTo(end);
         }
         Assertions.assertEquals(nftService.getPrice(COLLECTION, BigInteger.valueOf(3368)), BigDecimal.valueOf(34));
     }
@@ -85,5 +73,17 @@ public class NftServiceTest
         nftService.latestProcessedBlockCache.clear();
         nftService.nextBlockNumber = startingBlockNumber;
         return nftService;
+    }
+
+    private static Ignite getIgnite()
+    {
+        IgniteConfiguration cfg = new IgniteConfiguration();
+        DataStorageConfiguration storageCfg = new DataStorageConfiguration();
+        storageCfg.getDefaultDataRegionConfiguration().setPersistenceEnabled(true);
+        storageCfg.setStoragePath(STORAGE_PATH);
+        cfg.setDataStorageConfiguration(storageCfg);
+        Ignite ignite = Ignition.start(cfg);
+        ignite.cluster().state(ClusterState.ACTIVE);
+        return ignite;
     }
 }
