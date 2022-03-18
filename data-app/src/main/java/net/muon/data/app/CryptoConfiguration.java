@@ -3,6 +3,7 @@ package net.muon.data.app;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.muon.data.binance.BinanceSource;
 import net.muon.data.core.QuoteChangeListener;
+import net.muon.data.gateio.GateioSource;
 import net.muon.data.kucoin.KucoinSource;
 import org.apache.ignite.Ignite;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,5 +40,17 @@ public class CryptoConfiguration
     {
         return new BinanceSource(ignite, exchanges.orElse(Collections.emptyList()),
                 symbols.orElse(Collections.emptyList()), secret, apiKey, changeListeners);
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "gateio", name = "disabled", havingValue = "false", matchIfMissing = true)
+    public GateioSource gateioSource(Ignite ignite,
+                                     ObjectMapper objectMapper,
+                                     @Value("${exchanges:}") Optional<List<String>> exchanges,
+                                     @Value("${gateio.symbols:}") Optional<List<String>> symbols,
+                                     List<QuoteChangeListener> changeListeners)
+    {
+        return new GateioSource(ignite, objectMapper, exchanges.orElse(Collections.emptyList()),
+                symbols.orElse(Collections.emptyList()), changeListeners);
     }
 }

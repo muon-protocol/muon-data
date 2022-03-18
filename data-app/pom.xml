@@ -40,6 +40,11 @@
             <artifactId>data-kucoin</artifactId>
             <version>${parent.version}</version>
         </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-gateio</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>net.muon.data</groupId>

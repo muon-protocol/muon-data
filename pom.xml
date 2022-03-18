@@ -25,6 +25,7 @@
         <module>data-kucoin</module>
         <module>data-nft</module>
         <module>data-app</module>
+        <module>data-gateio</module>
     </modules>
 
 </project>
