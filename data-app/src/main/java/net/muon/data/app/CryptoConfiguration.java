@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import net.muon.data.binance.BinanceSource;
 import net.muon.data.core.QuoteChangeListener;
 import net.muon.data.kucoin.KucoinSource;
+import net.muon.data.sushiswap.SushiswapSource;
+import net.muon.data.uniswap.UniswapSource;
 import org.apache.ignite.Ignite;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -39,5 +41,29 @@ public class CryptoConfiguration
     {
         return new BinanceSource(ignite, exchanges.orElse(Collections.emptyList()),
                 symbols.orElse(Collections.emptyList()), secret, apiKey, changeListeners);
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "uniswap", name = "disabled", havingValue = "false", matchIfMissing = true)
+    public UniswapSource uniswapSource(Ignite ignite, ObjectMapper objectMapper,
+                                       @Value("${uniswap.subgraph-endpoint:}") String endpoint,
+                                       @Value("${exchanges:}") Optional<List<String>> exchanges,
+                                       @Value("${uniswap.symbols:}") Optional<List<String>> symbols,
+                                       List<QuoteChangeListener> changeListeners)
+    {
+        return new UniswapSource(ignite, objectMapper, endpoint, exchanges.orElse(Collections.emptyList()),
+                symbols.orElse(Collections.emptyList()), changeListeners);
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "sushiswap", name = "disabled", havingValue = "false", matchIfMissing = true)
+    public SushiswapSource sushiswapSource(Ignite ignite, ObjectMapper objectMapper,
+                                       @Value("${sushiswap.subgraph-endpoint:}") String endpoint,
+                                       @Value("${exchanges:}") Optional<List<String>> exchanges,
+                                       @Value("${sushiswap.symbols:}") Optional<List<String>> symbols,
+                                       List<QuoteChangeListener> changeListeners)
+    {
+        return new SushiswapSource(ignite, objectMapper, endpoint, exchanges.orElse(Collections.emptyList()),
+                symbols.orElse(Collections.emptyList()), changeListeners);
     }
 }

@@ -18,3 +18,8 @@ logging.level.com.vitamin=DEBUG
 logging.file.path=./logs
 logging.level.org.apache.ignite=INFO
 logging.config=./config/logback-spring.xml.sample
+
+nft.subgraph-endpoint=
+
+uniswap.subgraph-endpoint=
+sushiswap.subgraph-endpoint=
