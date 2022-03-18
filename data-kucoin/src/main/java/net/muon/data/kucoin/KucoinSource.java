@@ -167,13 +167,17 @@ public class KucoinSource extends CryptoSource
                 Map<String, Object> map = mapper.readValue(message, Map.class);
                 String topic = resolver.get(map, "topic");
                 Object data = resolver.get(map, "data");
-                if (!"message".equals(resolver.get(map, "type")) ||
-                        !"trade.ticker".equals(resolver.get(map, "subject")) ||
-                        topic == null || !topic.startsWith("/market/ticker:") ||
-                        !(data instanceof Map)
+                if (!"message".equals(resolver.get(map, "type"))
+                        || !"trade.ticker".equals(resolver.get(map, "subject"))
+                        || topic == null || !topic.startsWith("/market/ticker:")
+                        || !(data instanceof Map)
                 ) {
                     if ("welcome".equals(resolver.get(map, "type")))
                         subscribe();
+                    else if ("ack".equals(resolver.get(map, "type")))
+                        return; // Ack of subscription
+                    else if ("pong".equals(resolver.get(map, "type")))
+                        return; // Pong of ping
                     else
                         LOGGER.warn("Unhandled msg received in: {}", message);
                     return;
