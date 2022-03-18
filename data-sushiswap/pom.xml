@@ -12,10 +12,6 @@
 
     <artifactId>data-sushiswap</artifactId>
 
-    <properties>
-        <ws.version>1.5.2</ws.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>net.muon.data</groupId>

@@ -17,7 +17,7 @@ public class BinanceSource extends CryptoSource
     public BinanceSource(Ignite ignite, List<String> exchanges, List<String> symbols,
                          String secret, String apiKey, List<QuoteChangeListener> changeListeners)
     {
-        super("binance", exchanges, ignite, symbols, changeListeners, apiKey, secret);
+        super("binance", exchanges, ignite, symbols, changeListeners, apiKey, secret, null);
     }
 
     @Override

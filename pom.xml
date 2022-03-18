@@ -25,6 +25,8 @@
         <module>data-kucoin</module>
         <module>data-nft</module>
         <module>data-app</module>
+        <module>data-uniswap</module>
+        <module>data-sushiswap</module>
     </modules>
 
 </project>

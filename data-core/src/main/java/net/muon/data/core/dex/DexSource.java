@@ -10,13 +10,16 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 
+import javax.cache.expiry.CreatedExpiryPolicy;
+import javax.cache.expiry.Duration;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.time.Instant;
+import java.util.Date;
 import java.util.List;
-import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public abstract class DexSource extends CryptoSource
 {
@@ -27,7 +30,7 @@ public abstract class DexSource extends CryptoSource
     public DexSource(String name, Ignite ignite, ObjectMapper mapper, String endpoint, List<String> exchanges,
                      List<String> symbols, List<QuoteChangeListener> changeListeners)
     {
-        super(name, exchanges, ignite, symbols, changeListeners, null, null);
+        super(name, exchanges, ignite, symbols, changeListeners, null, null, CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, 10))); // FIXME ?
         this.mapper = mapper;
         subgraphService = new SubgraphService(endpoint, HttpClient.newBuilder().build(), mapper);
 
@@ -43,9 +46,12 @@ public abstract class DexSource extends CryptoSource
     @Override
     public CryptoQuote getQuote(String symbol)
     {
-        symbol = symbol.toUpperCase(Locale.ROOT);
-        var price = getPrice(symbol);
-        return new CryptoQuote(symbol, price, Instant.now().toEpochMilli()); // FIXME ?
+        var q = super.getQuote(symbol);
+        if (q != null)
+            return q;
+        q = new CryptoQuote(symbol, getPrice(symbol), Date.from(Instant.now()).getTime()); // FIXME
+        super.addQuote(q);
+        return q;
     }
 
     private BigDecimal getPrice(String symbol)
