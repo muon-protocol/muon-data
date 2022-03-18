@@ -6,6 +6,9 @@ import net.muon.data.core.CryptoSource;
 import net.muon.data.core.QuoteChangeListener;
 import net.muon.data.core.SubgraphService;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.configuration.CacheConfiguration;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -19,6 +22,7 @@ public abstract class DexSource extends CryptoSource
 {
     private final ObjectMapper mapper;
     private final SubgraphService subgraphService;
+    private final IgniteCache<String, String> tokenAddressCache;
 
     public DexSource(String name, Ignite ignite, ObjectMapper mapper, String endpoint, List<String> exchanges,
                      List<String> symbols, List<QuoteChangeListener> changeListeners)
@@ -26,6 +30,10 @@ public abstract class DexSource extends CryptoSource
         super(name, exchanges, ignite, symbols, changeListeners, null, null);
         this.mapper = mapper;
         subgraphService = new SubgraphService(endpoint, HttpClient.newBuilder().build(), mapper);
+
+        var config = new CacheConfiguration<String, String>(id + "_token_address_cache");
+        config.setCacheMode(CacheMode.REPLICATED);
+        tokenAddressCache = ignite.getOrCreateCache(config);
     }
 
     @Override
@@ -67,11 +75,16 @@ public abstract class DexSource extends CryptoSource
         }
     }
 
-    private String fetchTokenAddress(String symbol) // TODO: cache? reuse?
+    private String fetchTokenAddress(String symbol)
     {
+        var address = tokenAddressCache.get(symbol);
+        if (address != null)
+            return address;
         try {
             var response = subgraphService.fetchQueryResponse(getTokenAddressQuery(symbol));
-            return mapper.readValue(response, TokenAddressQueryResponse.class).getAddress();
+            address = mapper.readValue(response, TokenAddressQueryResponse.class).getAddress();
+            tokenAddressCache.put(symbol, address);
+            return address;
         } catch (URISyntaxException | IOException | InterruptedException ex) {
             throw new RuntimeException(ex);
         }
