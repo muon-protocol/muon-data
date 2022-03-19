@@ -4,7 +4,7 @@ import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.List;
 
-class TokenPriceData
+class SaleQueryResponse
 {
     private SalesData data;
 

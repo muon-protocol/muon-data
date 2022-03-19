@@ -1,4 +1,4 @@
-package net.muon.data.nft;
+package net.muon.data.nft.web3;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;

@@ -30,7 +30,7 @@ public class KucoinSource extends CryptoSource
     public KucoinSource(Ignite ignite, ObjectMapper mapper, List<String> exchanges,
                         List<String> symbols, List<QuoteChangeListener> changeListeners)
     {
-        super("kucoin", exchanges, ignite, symbols, changeListeners, null, null);
+        super("kucoin", exchanges, ignite, symbols, changeListeners, null, null, null);
         this.mapper = mapper;
     }
 
