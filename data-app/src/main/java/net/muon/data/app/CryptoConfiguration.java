@@ -62,7 +62,7 @@ public class CryptoConfiguration
     @ConditionalOnProperty(prefix = "kraken", name = "disabled", havingValue = "false", matchIfMissing = true)
     public KrakenSource krakenSource(Ignite ignite,
                                      @Value("${exchanges:}") Optional<List<String>> exchanges,
-                                     @Value("${gateio.symbols:}") Optional<List<String>> symbols,
+                                     @Value("${kraken.symbols:}") Optional<List<String>> symbols,
                                      @Value("${kraken.secret}") String secret,
                                      @Value("${kraken.api-key}") String apiKey,
                                      List<QuoteChangeListener> changeListeners)
