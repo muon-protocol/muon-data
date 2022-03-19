@@ -39,7 +39,7 @@ public class GateioSource extends CryptoSource
                         List<String> symbols,
                         List<QuoteChangeListener> changeListeners)
     {
-        super("gateio", exchanges, ignite, symbols, changeListeners, null, null);
+        super("gateio", exchanges, ignite, symbols, changeListeners, null, null, null);
         this.mapper = mapper;
         symbols.stream()
                 .map(CurrencyPair::new)
