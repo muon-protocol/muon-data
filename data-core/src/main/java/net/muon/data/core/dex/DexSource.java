@@ -40,8 +40,7 @@ public abstract class DexSource extends CryptoSource
     }
 
     @Override
-    public void connect()
-    {}
+    public void connect() {}
 
     @Override
     public CryptoQuote getQuote(String symbol)
@@ -49,7 +48,10 @@ public abstract class DexSource extends CryptoSource
         var q = super.getQuote(symbol);
         if (q != null)
             return q;
-        q = new CryptoQuote(symbol, getPrice(symbol), Date.from(Instant.now()).getTime()); // FIXME
+        var price = getPrice(symbol);
+        if (price == null)
+            return null;
+        q = new CryptoQuote(symbol, price, Date.from(Instant.now()).getTime());
         super.addQuote(q);
         return q;
     }
