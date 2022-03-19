@@ -12,7 +12,6 @@ import org.knowm.xchange.exceptions.ExchangeException;
 import org.knowm.xchange.utils.ObjectMapperHelper;
 
 import javax.cache.configuration.Factory;
-import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +48,7 @@ public abstract class CryptoSource extends Source<CryptoQuote>
     protected void connect(Class<? extends StreamingExchange> clazz)
     {
         exchange = createExchange(clazz);
-        subscription = createSubsciption();
+        subscription = createSubscription();
         doConnect();
     }
 
@@ -76,12 +75,12 @@ public abstract class CryptoSource extends Source<CryptoQuote>
         return ExchangeFactory.INSTANCE.createExchange(clazz, apiKey, secret);
     }
 
-    protected ProductSubscription createSubsciption()
+    protected ProductSubscription createSubscription()
     {
         ProductSubscription.ProductSubscriptionBuilder builder = ProductSubscription.create();
         if (symbols.isEmpty()) {
             try {
-                exchange.getExchangeSymbols().forEach(currencyPair -> builder.addTrades(currencyPair));
+                exchange.getExchangeSymbols().forEach(builder::addTrades);
             } catch (Exception e) {
                 LOGGER.warn("Exception suppressed.", e);
             }

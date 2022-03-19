@@ -108,7 +108,6 @@ public class GeminiSource extends CryptoSource
     {
         // TODO: EXCEPTION HANDLING (if protocol changes)
         GeminiResponse response;
-        LOGGER.debug(message);
         try {
             response = mapper.readValue(message, GeminiResponse.class);
         } catch (JsonProcessingException e) {
@@ -166,7 +165,7 @@ public class GeminiSource extends CryptoSource
                     "?bids=false" +
                     "?offers=false" +
                     "?auctions=false" +
-                    "?trades=false"
+                    "?trades=true"
             ));
         }
 

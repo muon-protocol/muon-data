@@ -239,9 +239,9 @@ public class GateioSource extends CryptoSource
         @Override
         public void onMessage(String message)
         {
-            var qoutes = parseSafe(message);
-            LOGGER.debug("Received data: {}", qoutes);
-            qoutes.forEach(GateioSource.this::addQuote);
+            var quotes = parseSafe(message);
+            LOGGER.debug("Received data: {}", quotes);
+            quotes.forEach(GateioSource.this::addQuote);
         }
 
         @Override
