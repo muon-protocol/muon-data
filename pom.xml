@@ -26,6 +26,8 @@
         <module>data-nft</module>
         <module>data-app</module>
         <module>data-gateio</module>
+        <module>data-gemini</module>
+        <module>data-kraken</module>
         <module>data-uniswap</module>
         <module>data-sushiswap</module>
     </modules>

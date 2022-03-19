@@ -13,6 +13,24 @@ binance.api-key=
 # Set secret key for binance if required
 binance.secret=
 
+# Disable gateio
+gateio.disabled=false
+# gateio.symbols=*
+
+# Disable kraken
+kraken.disabled=false
+# kraken.symbols=*
+kraken.api-key=
+kraken.secret=
+
+# Disable kucoin
+kucoin.disabled=false
+# kucoin.symbols=*
+
+# Disable gemini
+gemini.disabled=false
+# gemini.symbols=*
+
 ignite-client-address=127.0.0.1:47500
 logging.level.com.vitamin=DEBUG
 logging.file.path=./logs

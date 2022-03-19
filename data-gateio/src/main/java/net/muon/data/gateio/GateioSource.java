@@ -22,11 +22,6 @@ import java.util.*;
 
 public class GateioSource extends CryptoSource
 {
-//    protected static final UriComponentsBuilder URI_BUILDER = UriComponentsBuilder.newInstance()
-//            .scheme("wss")
-//            .host("api.gateio.ws")
-//            .path("/ws/v4/");
-
     private WebSocketClient client;
     private static final Logger LOGGER = LoggerFactory.getLogger(GateioSource.class);
     private final ObjectMapper mapper;
@@ -107,6 +102,10 @@ public class GateioSource extends CryptoSource
             LOGGER.warn("Failed to parse event: " + message, e);
             return Collections.emptyList();
         }
+        if ("spot.pong".equals(response.getChannel())) {
+            return Collections.emptyList();
+        }
+
         if (!"spot.trades".equals(response.getChannel())) {
             LOGGER.warn("Unexpected channel received in: {}", message);
             return Collections.emptyList();
@@ -158,12 +157,12 @@ public class GateioSource extends CryptoSource
             return Collections.emptyList();
         }
 
-        var qoute = new CryptoQuote();
-        qoute.setPrice(result.getPrice());
-        qoute.setTime(result.getTime().longValue());
-        qoute.setSymbol(symbolDictionary.get(result.getPair().toUpperCase()));
-        qoute.setStatus(Quote.MarketStatus.REGULAR_MARKET);
-        return Collections.singletonList(qoute);
+        var quote = new CryptoQuote();
+        quote.setPrice(result.getPrice());
+        quote.setTime(result.getTime().longValue());
+        quote.setSymbol(symbolDictionary.get(result.getPair().toUpperCase()));
+        quote.setStatus(Quote.MarketStatus.REGULAR_MARKET);
+        return Collections.singletonList(quote);
     }
 
     @Override
@@ -172,7 +171,6 @@ public class GateioSource extends CryptoSource
         Map<String, String> info = new HashMap<>();
         info.put("id", id);
         info.put("name", "Gateio");
-//        info.put("wss-uri", URI_BUILDER.build().toUri().toString());
         return info;
     }
 
@@ -206,11 +204,15 @@ public class GateioSource extends CryptoSource
 
     private class WebSocketClient extends org.java_websocket.client.WebSocketClient
     {
+        private final Integer pingInterval;
+        private Timer timer;
+
         public WebSocketClient()
         {
-//            super(URI_BUILDER.build().toUri());
             super(URI.create("wss://api.gateio.ws/ws/v4/"));
             LOGGER.debug("Connection to {}", getURI());
+            this.pingInterval = 5000;
+
         }
 
         @Override
@@ -218,6 +220,20 @@ public class GateioSource extends CryptoSource
         {
             LOGGER.info("Connection opened");
             subscribe();
+            timer = new Timer();
+            timer.schedule(new TimerTask()
+            {
+                @Override
+                public void run()
+                {
+                    ping();
+                }
+            }, pingInterval, pingInterval);
+        }
+
+        private void ping()
+        {
+            send("{\"time\": " + new Date().getTime() / 1000 + ", \"channel\" : \"spot.ping\"}");
         }
 
         @Override
