@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Configuration
@@ -89,10 +90,11 @@ public class CryptoConfiguration
                                        @Value("${uniswap.subgraph-endpoint:}") String endpoint,
                                        @Value("${exchanges:}") Optional<List<String>> exchanges,
                                        @Value("${uniswap.symbols:}") Optional<List<String>> symbols,
+                                       @Value("#{${uniswap.tokens}}") Map<String, String> tokens,
                                        List<QuoteChangeListener> changeListeners)
     {
         return new UniswapSource(ignite, objectMapper, endpoint, exchanges.orElse(Collections.emptyList()),
-                symbols.orElse(Collections.emptyList()), changeListeners);
+                symbols.orElse(Collections.emptyList()), tokens, changeListeners);
     }
 
     @Bean
@@ -101,9 +103,10 @@ public class CryptoConfiguration
                                            @Value("${sushiswap.subgraph-endpoint:}") String endpoint,
                                            @Value("${exchanges:}") Optional<List<String>> exchanges,
                                            @Value("${sushiswap.symbols:}") Optional<List<String>> symbols,
+                                           @Value("#{${sushiswap.tokens}}") Map<String, String> tokens,
                                            List<QuoteChangeListener> changeListeners)
     {
         return new SushiswapSource(ignite, objectMapper, endpoint, exchanges.orElse(Collections.emptyList()),
-                symbols.orElse(Collections.emptyList()), changeListeners);
+                symbols.orElse(Collections.emptyList()), tokens, changeListeners);
     }
 }

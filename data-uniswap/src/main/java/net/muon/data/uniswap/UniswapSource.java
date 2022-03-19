@@ -6,12 +6,13 @@ import net.muon.data.core.dex.DexSource;
 import org.apache.ignite.Ignite;
 
 import java.util.List;
+import java.util.Map;
 
 public class UniswapSource extends DexSource
 {
-    public UniswapSource(Ignite ignite, ObjectMapper mapper, String endpoint, List<String> exchanges, List<String> symbols, List<QuoteChangeListener> changeListeners)
+    public UniswapSource(Ignite ignite, ObjectMapper mapper, String endpoint, List<String> exchanges, List<String> symbols, Map<String, String> tokens, List<QuoteChangeListener> changeListeners)
     {
-        super("uniswap", ignite, mapper, endpoint, exchanges, symbols, changeListeners);
+        super("uniswap", ignite, mapper, endpoint, exchanges, symbols, tokens, changeListeners);
     }
 
     @Override

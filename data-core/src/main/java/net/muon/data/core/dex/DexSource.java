@@ -6,9 +6,6 @@ import net.muon.data.core.CryptoSource;
 import net.muon.data.core.QuoteChangeListener;
 import net.muon.data.core.SubgraphService;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.CacheConfiguration;
 
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
@@ -19,24 +16,27 @@ import java.net.http.HttpClient;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public abstract class DexSource extends CryptoSource
 {
     private final ObjectMapper mapper;
     private final SubgraphService subgraphService;
-    private final IgniteCache<String, String> tokenAddressCache;
+    //    private final IgniteCache<String, String> tokenAddressCache;
+    private final Map<String, String> tokens;
 
     public DexSource(String name, Ignite ignite, ObjectMapper mapper, String endpoint, List<String> exchanges,
-                     List<String> symbols, List<QuoteChangeListener> changeListeners)
+                     List<String> symbols, Map<String, String> tokens, List<QuoteChangeListener> changeListeners)
     {
         super(name, exchanges, ignite, symbols, changeListeners, null, null, CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, 10))); // FIXME ?
         this.mapper = mapper;
         subgraphService = new SubgraphService(endpoint, HttpClient.newBuilder().build(), mapper);
 
-        var config = new CacheConfiguration<String, String>(id + "_token_address_cache");
-        config.setCacheMode(CacheMode.REPLICATED);
-        tokenAddressCache = ignite.getOrCreateCache(config);
+//        var config = new CacheConfiguration<String, String>(id + "_token_address_cache");
+//        config.setCacheMode(CacheMode.REPLICATED);
+//        tokenAddressCache = ignite.getOrCreateCache(config);
+        this.tokens = tokens;
     }
 
     @Override
@@ -51,7 +51,7 @@ public abstract class DexSource extends CryptoSource
         var price = getPrice(symbol);
         if (price == null)
             return null;
-        q = new CryptoQuote(symbol, price, Date.from(Instant.now()).getTime());
+        q = new CryptoQuote(symbol, price, Date.from(Instant.now()).getTime()); // FIXME
         super.addQuote(q);
         return q;
     }
@@ -61,7 +61,13 @@ public abstract class DexSource extends CryptoSource
         var parts = symbol.split("-");
         if (parts.length != 2)
             throw new IllegalArgumentException("Could not parse currency pair from '" + symbol + "'");
-        return getPrice(fetchTokenAddress(parts[0]), fetchTokenAddress(parts[1]));
+        var token0Address = getTokenAddress(parts[0]);
+        if (token0Address == null)
+            return null;
+        var token1Address = getTokenAddress(parts[1]);
+        if (token1Address == null)
+            return null;
+        return getPrice(token0Address, token1Address);
     }
 
     private BigDecimal getPrice(String base, String counter)
@@ -83,19 +89,20 @@ public abstract class DexSource extends CryptoSource
         }
     }
 
-    private String fetchTokenAddress(String symbol)
+    private String getTokenAddress(String symbol)
     {
-        var address = tokenAddressCache.get(symbol);
-        if (address != null)
-            return address;
-        try {
-            var response = subgraphService.fetchQueryResponse(getTokenAddressQuery(symbol));
-            address = mapper.readValue(response, TokenAddressQueryResponse.class).getAddress();
-            tokenAddressCache.put(symbol, address);
-            return address;
-        } catch (URISyntaxException | IOException | InterruptedException ex) {
-            throw new RuntimeException(ex);
-        }
+        return tokens.get(symbol);
+//        var address = tokenAddressCache.get(symbol);
+//        if (address != null)
+//            return address;
+//        try {
+//            var response = subgraphService.fetchQueryResponse(getTokenAddressQuery(symbol));
+//            address = mapper.readValue(response, TokenAddressQueryResponse.class).getAddress();
+//            tokenAddressCache.put(symbol, address);
+//            return address;
+//        } catch (URISyntaxException | IOException | InterruptedException ex) {
+//            throw new RuntimeException(ex);
+//        }
     }
 
     private String getTokenPriceQuery(String token0, String token1)
