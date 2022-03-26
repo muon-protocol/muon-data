@@ -17,7 +17,7 @@ public class CryptoQuote extends Quote
 
     public CryptoQuote(String symbol, BigDecimal price, long time)
     {
-        super(symbol, price, time, MarketStatus.REGULAR_MARKET);
+        super(symbol, price, time);
     }
 
     public CryptoQuote(Trade trade)
@@ -33,7 +33,6 @@ public class CryptoQuote extends Quote
                 + "symbol='" + getSymbol() + '\''
                 + ", price=" + getPrice()
                 + ", time=" + getTime()
-                + ", status=" + getStatus()
                 + '}';
     }
 }

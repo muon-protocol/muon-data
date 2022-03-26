@@ -20,8 +20,6 @@ import java.net.http.HttpResponse;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-//@Component
-//@ConditionalOnProperty(prefix = "kucoin", name = "disabled", havingValue = "false", matchIfMissing = true)
 public class KucoinSource extends CryptoSource
 {
     private WebSocketClient client;
@@ -29,13 +27,10 @@ public class KucoinSource extends CryptoSource
     private final ObjectMapper mapper;
     private boolean singleSubscriptionMode = false;
 
-    public KucoinSource(Ignite ignite,
-                        ObjectMapper mapper,
-            /*@Value("${exchanges:}")*/ Optional<List<String>> exchanges,
-            /*@Value("${kucoin.symbols:}")*/ Optional<List<String>> symbols,
-                        List<QuoteChangeListener> changeListeners)
+    public KucoinSource(Ignite ignite, ObjectMapper mapper, List<String> exchanges,
+                        List<String> symbols, List<QuoteChangeListener> changeListeners)
     {
-        super("kucoin", exchanges, ignite, symbols, changeListeners, null, null);
+        super("kucoin", exchanges, ignite, symbols, changeListeners, null, null, null);
         this.mapper = mapper;
     }
 
@@ -133,12 +128,13 @@ public class KucoinSource extends CryptoSource
         }
     }
 
+    private static PropertyPathValueResolver resolver = new PropertyPathValueResolver();
+
     private class WebSocketClient extends org.java_websocket.client.WebSocketClient
     {
         private final Map<String, Object> bullet;
         private final Integer pingInterval;
         private Timer timer;
-        private static PropertyPathValueResolver resolver = new PropertyPathValueResolver();
 
         public WebSocketClient(Map<String, Object> bullet)
         {
@@ -171,13 +167,17 @@ public class KucoinSource extends CryptoSource
                 Map<String, Object> map = mapper.readValue(message, Map.class);
                 String topic = resolver.get(map, "topic");
                 Object data = resolver.get(map, "data");
-                if (!"message".equals(resolver.get(map, "type")) ||
-                        !"trade.ticker".equals(resolver.get(map, "subject")) ||
-                        topic == null || !topic.startsWith("/market/ticker:") ||
-                        !(data instanceof Map)
+                if (!"message".equals(resolver.get(map, "type"))
+                        || !"trade.ticker".equals(resolver.get(map, "subject"))
+                        || topic == null || !topic.startsWith("/market/ticker:")
+                        || !(data instanceof Map)
                 ) {
                     if ("welcome".equals(resolver.get(map, "type")))
                         subscribe();
+                    else if ("ack".equals(resolver.get(map, "type")))
+                        return; // Ack of subscription
+                    else if ("pong".equals(resolver.get(map, "type")))
+                        return; // Pong of ping
                     else
                         LOGGER.warn("Unhandled msg received in: {}", message);
                     return;
@@ -187,7 +187,6 @@ public class KucoinSource extends CryptoSource
                 quote.setPrice(new BigDecimal((String) resolver.get((Map<String, Object>) data, "price")));
                 quote.setTime(resolver.get((Map<String, Object>) data, "time"));
                 quote.setSymbol(pair.toUpperCase());
-                quote.setStatus(Quote.MarketStatus.REGULAR_MARKET);
                 var quotes = Collections.singletonList(quote);
                 LOGGER.debug("Received data: {}", quotes);
                 quotes.forEach(KucoinSource.this::addQuote);

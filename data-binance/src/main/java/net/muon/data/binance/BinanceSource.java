@@ -11,21 +11,13 @@ import org.knowm.xchange.exceptions.ExchangeException;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
-//@Component
-//@ConditionalOnProperty(prefix = "binance", name = "disabled", havingValue = "false", matchIfMissing = true)
 public class BinanceSource extends CryptoSource
 {
-
-    public BinanceSource(Ignite ignite,
-                         /*@Value("${exchanges:}")*/ Optional<List<String>> exchanges,
-                          /*@Value("${binance.symbols:}")*/ Optional<List<String>> symbols,
-                          /*@Value("${binance.secret}")*/ String secret,
-                          /*@Value("${binance.api-key}")*/ String apiKey,
-                         List<QuoteChangeListener> changeListeners)
+    public BinanceSource(Ignite ignite, List<String> exchanges, List<String> symbols,
+                         String secret, String apiKey, List<QuoteChangeListener> changeListeners)
     {
-        super("binance", exchanges, ignite, symbols, changeListeners, apiKey, secret);
+        super("binance", exchanges, ignite, symbols, changeListeners, apiKey, secret, null);
     }
 
     @Override

@@ -10,22 +10,13 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>data-kucoin</artifactId>
-
-    <properties>
-        <ws.version>1.5.2</ws.version>
-    </properties>
+    <artifactId>data-uniswap</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-core</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.java-websocket</groupId>
-            <artifactId>Java-WebSocket</artifactId>
-            <version>${ws.version}</version>
         </dependency>
     </dependencies>
 

@@ -1,34 +1,23 @@
 package net.muon.data.core;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 public class Quote
 {
     private String symbol;
     private BigDecimal price;
     private long time;//in millis
-    private MarketStatus status;
 
     public Quote()
     {
     }
 
-    public Quote(String symbol, BigDecimal price, long time, MarketStatus status)
+    public Quote(String symbol, BigDecimal price, long time)
     {
         this.symbol = symbol;
         this.price = price;
         this.time = time;
-        this.status = status;
-    }
-
-    public MarketStatus getStatus()
-    {
-        return status;
-    }
-
-    public void setStatus(MarketStatus status)
-    {
-        this.status = status;
     }
 
     public String getSymbol()
@@ -61,6 +50,11 @@ public class Quote
         this.time = time;
     }
 
+    public Instant getInstantTime()
+    {
+        return Instant.ofEpochMilli(this.time);
+    }
+
     @Override
     public String toString()
     {
@@ -68,17 +62,6 @@ public class Quote
                 + "symbol='" + symbol + '\''
                 + ", price=" + price
                 + ", time=" + time
-                + ", status=" + status
                 + '}';
-    }
-
-    public enum MarketStatus
-    {
-        PRE_MARKET,
-        REGULAR_MARKET,
-        POST_MARKET,
-        EXTENDED_HOURS_MARKET,
-        CLOSED,
-        UNRECOGNIZED,
     }
 }

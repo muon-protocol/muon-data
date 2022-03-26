@@ -11,6 +11,7 @@ import javax.cache.Cache;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Factory;
 import javax.cache.event.*;
+import javax.cache.expiry.ExpiryPolicy;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,11 +31,14 @@ public abstract class Source<Q extends Quote>
                   List<String> exchanges,
                   Ignite ignite,
                   List<String> symbols,
-                  List<QuoteChangeListener> changeListeners)
+                  List<QuoteChangeListener> changeListeners,
+                  Factory<ExpiryPolicy> cacheExpiryPolicy)
     {
         LOGGER.debug("Constructing {} with id {}", this.getClass(), id);
         var config = new CacheConfiguration<String, Q>(id + "_cache");
         config.setCacheMode(CacheMode.REPLICATED);
+        if (cacheExpiryPolicy != null)
+            config.setExpiryPolicyFactory(cacheExpiryPolicy);
         this.cache = ignite.getOrCreateCache(config);
         cache.registerCacheEntryListener(new CacheEntryListenerConfigurationImpl(changeListeners));
         this.symbols = symbols;
