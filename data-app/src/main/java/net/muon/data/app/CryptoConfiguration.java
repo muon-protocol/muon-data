@@ -125,7 +125,7 @@ public class CryptoConfiguration
     @ConfigurationProperties(prefix = "sushiswap")
     private class SushiswapProperties extends DexProperties
     {
-        @Value("${uniswap.subgraph-endpoint}")
+        @Value("${sushiswap.subgraph-endpoint}")
         private String subgraphEndpoint;
     }
 

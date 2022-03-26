@@ -64,7 +64,7 @@ public class CryptoQuoteService extends QuoteService<CryptoQuote, CryptoSource>
         BigDecimal sum = quotes.get(0).getPrice();
         for (int i = 1; i < quotes.size(); i++) {
             Quote q = quotes.get(i);
-            if (ignorePriceIfOlderThanMillis != null && (Instant.now().toEpochMilli() - q.getTime()) < ignorePriceIfOlderThanMillis) {
+            if (ignorePriceIfOlderThanMillis == null || (Instant.now().toEpochMilli() - q.getTime()) < ignorePriceIfOlderThanMillis) {
                 sum = sum.add(q.getPrice());
             }
         }
