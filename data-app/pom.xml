@@ -33,17 +33,17 @@
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-binance</artifactId>
-            <version>${parent.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-kucoin</artifactId>
-            <version>${parent.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-gateio</artifactId>
-            <version>${parent.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>net.muon.data</groupId>
@@ -58,13 +58,13 @@
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-uniswap</artifactId>
-            <version>${parent.version}</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-nft</artifactId>
-            <version>${parent.version}</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
@@ -86,8 +86,7 @@
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-sushiswap</artifactId>
-            <version>${parent.version}</version>
-            <scope>compile</scope>
+            <version>${project.version}</version>
         </dependency>
 
     </dependencies>
@@ -104,10 +103,8 @@
                         --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
                         --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
                         --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
-                        --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED
-                        --add-opens java.base/java.nio=ALL-UNNAMED
-                        --add-opens java.base/java.util=ALL-UNNAMED
-                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+                        --illegal-access=permit
                     </jvmArguments>
                 </configuration>
             </plugin>

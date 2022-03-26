@@ -58,7 +58,6 @@ public class CryptoQuoteService extends QuoteService<CryptoQuote, CryptoSource>
         Preconditions.checkArgument(!quotes.isEmpty());
         Quote p0 = quotes.get(0);
         CryptoQuote avg = new CryptoQuote();
-        avg.setStatus(p0.getStatus());
         avg.setTime(p0.getTime());
         avg.setSymbol(p0.getSymbol());
         BigDecimal sum = quotes.get(0).getPrice();

@@ -187,7 +187,6 @@ public class KucoinSource extends CryptoSource
                 quote.setPrice(new BigDecimal((String) resolver.get((Map<String, Object>) data, "price")));
                 quote.setTime(resolver.get((Map<String, Object>) data, "time"));
                 quote.setSymbol(pair.toUpperCase());
-                quote.setStatus(Quote.MarketStatus.REGULAR_MARKET);
                 var quotes = Collections.singletonList(quote);
                 LOGGER.debug("Received data: {}", quotes);
                 quotes.forEach(KucoinSource.this::addQuote);

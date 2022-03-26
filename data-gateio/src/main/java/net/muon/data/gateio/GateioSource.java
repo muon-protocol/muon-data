@@ -4,7 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import net.muon.data.core.*;
+import net.muon.data.core.CryptoQuote;
+import net.muon.data.core.CryptoSource;
+import net.muon.data.core.PropertyPathValueResolver;
+import net.muon.data.core.QuoteChangeListener;
 import org.apache.ignite.Ignite;
 import org.java_websocket.handshake.ServerHandshake;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -161,7 +164,6 @@ public class GateioSource extends CryptoSource
         quote.setPrice(result.getPrice());
         quote.setTime(result.getTime().longValue());
         quote.setSymbol(symbolDictionary.get(result.getPair().toUpperCase()));
-        quote.setStatus(Quote.MarketStatus.REGULAR_MARKET);
         return Collections.singletonList(quote);
     }
 

@@ -20,7 +20,7 @@
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-core</artifactId>
-            <version>${parent.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.knowm.xchange</groupId>

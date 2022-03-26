@@ -17,7 +17,7 @@ public class NftServiceTest
 {
     public static final String COLLECTION = "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d";
     private static final String PROVIDER = "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
-    private static final String STORAGE_PATH = "/tmp"; // FIXME
+    private static final String STORAGE_PATH = "/tmp/muon-data";
     private static final Ignite ignite = getIgnite();
 
     @Test
