@@ -12,12 +12,15 @@ import net.muon.data.uniswap.UniswapSource;
 import org.apache.ignite.Ignite;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Configuration
@@ -86,27 +89,58 @@ public class CryptoConfiguration
 
     @Bean
     @ConditionalOnProperty(prefix = "uniswap", name = "disabled", havingValue = "false", matchIfMissing = true)
-    public UniswapSource uniswapSource(Ignite ignite, ObjectMapper objectMapper,
-                                       @Value("${uniswap.subgraph-endpoint:}") String endpoint,
-                                       @Value("${exchanges:}") Optional<List<String>> exchanges,
-                                       @Value("${uniswap.symbols:}") Optional<List<String>> symbols,
-                                       @Value("#{${uniswap.tokens}}") Map<String, String> tokens,
-                                       List<QuoteChangeListener> changeListeners)
+    public UniswapSource uniswapSource(Ignite ignite,
+                                       ObjectMapper objectMapper,
+                                       UniswapProperties properties,
+                                       List<QuoteChangeListener> changeListeners,
+                                       @Value("${exchanges:}") Optional<List<String>> exchanges)
     {
-        return new UniswapSource(ignite, objectMapper, endpoint, exchanges.orElse(Collections.emptyList()),
-                symbols.orElse(Collections.emptyList()), tokens, changeListeners);
+        return new UniswapSource(ignite, objectMapper, properties.subgraphEndpoint, exchanges.orElse(Collections.emptyList()),
+                properties.getTokens(), changeListeners);
     }
 
     @Bean
     @ConditionalOnProperty(prefix = "sushiswap", name = "disabled", havingValue = "false", matchIfMissing = true)
-    public SushiswapSource sushiswapSource(Ignite ignite, ObjectMapper objectMapper,
-                                           @Value("${sushiswap.subgraph-endpoint:}") String endpoint,
-                                           @Value("${exchanges:}") Optional<List<String>> exchanges,
-                                           @Value("${sushiswap.symbols:}") Optional<List<String>> symbols,
-                                           @Value("#{${sushiswap.tokens}}") Map<String, String> tokens,
-                                           List<QuoteChangeListener> changeListeners)
+    public SushiswapSource sushiswapSource(Ignite ignite,
+                                           ObjectMapper objectMapper,
+                                           SushiswapProperties properties,
+                                           List<QuoteChangeListener> changeListeners,
+                                           @Value("${exchanges:}") Optional<List<String>> exchanges)
     {
-        return new SushiswapSource(ignite, objectMapper, endpoint, exchanges.orElse(Collections.emptyList()),
-                symbols.orElse(Collections.emptyList()), tokens, changeListeners);
+        return new SushiswapSource(ignite, objectMapper, properties.subgraphEndpoint, exchanges.orElse(Collections.emptyList()),
+                properties.getTokens(), changeListeners);
+    }
+
+    @Component
+    @EnableConfigurationProperties
+    @ConfigurationProperties(prefix = "uniswap")
+    private class UniswapProperties extends DexProperties
+    {
+        @Value("${uniswap.subgraph-endpoint}")
+        private String subgraphEndpoint;
+    }
+
+    @Component
+    @EnableConfigurationProperties
+    @ConfigurationProperties(prefix = "sushiswap")
+    private class SushiswapProperties extends DexProperties
+    {
+        @Value("${uniswap.subgraph-endpoint}")
+        private String subgraphEndpoint;
+    }
+
+    private abstract static class DexProperties
+    {
+        private HashMap<String, String> tokens;
+
+        public HashMap<String, String> getTokens()
+        {
+            return tokens;
+        }
+
+        public void setTokens(HashMap<String, String> tokens)
+        {
+            this.tokens = tokens;
+        }
     }
 }

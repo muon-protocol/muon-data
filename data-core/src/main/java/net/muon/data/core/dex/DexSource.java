@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -23,19 +24,14 @@ public abstract class DexSource extends CryptoSource
 {
     private final ObjectMapper mapper;
     private final SubgraphService subgraphService;
-    //    private final IgniteCache<String, String> tokenAddressCache;
     private final Map<String, String> tokens;
 
     public DexSource(String name, Ignite ignite, ObjectMapper mapper, String endpoint, List<String> exchanges,
-                     List<String> symbols, Map<String, String> tokens, List<QuoteChangeListener> changeListeners)
+                     Map<String, String> tokens, List<QuoteChangeListener> changeListeners)
     {
-        super(name, exchanges, ignite, symbols, changeListeners, null, null, CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, 10))); // FIXME ?
+        super(name, exchanges, ignite, Collections.emptyList(), changeListeners, null, null, CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, 10))); // FIXME ?
         this.mapper = mapper;
         subgraphService = new SubgraphService(endpoint, HttpClient.newBuilder().build(), mapper);
-
-//        var config = new CacheConfiguration<String, String>(id + "_token_address_cache");
-//        config.setCacheMode(CacheMode.REPLICATED);
-//        tokenAddressCache = ignite.getOrCreateCache(config);
         this.tokens = tokens;
     }
 
@@ -92,17 +88,6 @@ public abstract class DexSource extends CryptoSource
     private String getTokenAddress(String symbol)
     {
         return tokens.get(symbol);
-//        var address = tokenAddressCache.get(symbol);
-//        if (address != null)
-//            return address;
-//        try {
-//            var response = subgraphService.fetchQueryResponse(getTokenAddressQuery(symbol));
-//            address = mapper.readValue(response, TokenAddressQueryResponse.class).getAddress();
-//            tokenAddressCache.put(symbol, address);
-//            return address;
-//        } catch (URISyntaxException | IOException | InterruptedException ex) {
-//            throw new RuntimeException(ex);
-//        }
     }
 
     private String getTokenPriceQuery(String token0, String token1)
