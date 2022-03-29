@@ -1,6 +1,6 @@
 package net.muon.data.app;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import net.muon.data.core.SubgraphClient;
 import net.muon.data.nft.subgraph.NftService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -18,8 +18,8 @@ public class NftConfiguration
 //    }
 
     @Bean
-    public NftService nftService(@Value("${nft.subgraph-endpoint}") String endpoint, ObjectMapper objectMapper)
+    public NftService nftService(SubgraphClient subgraphClient, @Value("${nft.subgraph-endpoint}") String endpoint)
     {
-        return new NftService(endpoint, objectMapper);
+        return new NftService(subgraphClient, endpoint);
     }
 }

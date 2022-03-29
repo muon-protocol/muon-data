@@ -18,11 +18,6 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.github.mizosoft.methanol</groupId>
-            <artifactId>methanol</artifactId>
-            <version>1.6.0</version>
-        </dependency>
-        <dependency>
             <groupId>org.web3j</groupId>
             <artifactId>crypto</artifactId>
             <version>4.8.7</version>

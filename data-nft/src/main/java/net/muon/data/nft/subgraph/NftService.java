@@ -1,15 +1,14 @@
 package net.muon.data.nft.subgraph;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import net.muon.data.core.SubgraphService;
+import net.muon.data.core.SubgraphClient;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
-import java.net.URISyntaxException;
-import java.net.http.HttpClient;
+import java.net.URI;
+import java.sql.Timestamp;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class NftService
@@ -17,13 +16,13 @@ public class NftService
     protected static final BigDecimal ETH_IN_WEI = BigDecimal.valueOf(1000000000000000000L);
     private static final MathContext PRECISION = new MathContext(5);
 
-    private final ObjectMapper objectMapper;
-    private final SubgraphService subgraphService;
+    private final URI endpoint;
+    private final SubgraphClient subgraphClient;
 
-    public NftService(String endpoint, ObjectMapper objectMapper)
+    public NftService(SubgraphClient subgraphClient, String endpoint)
     {
-        this.objectMapper = objectMapper;
-        subgraphService = new SubgraphService(endpoint, HttpClient.newBuilder().build(), objectMapper);
+        this.endpoint = URI.create(endpoint);
+        this.subgraphClient = subgraphClient;
     }
 
     public Map<String, BigDecimal> getPrice(String collectionId, BigInteger nftId)
@@ -31,10 +30,10 @@ public class NftService
         var priceData = fetchTokenPriceData(collectionId, nftId);
         if (priceData == null)
             return null;
-        var sales = priceData.getData().getSales();
+        var sales = priceData.getSales();
         if (sales.isEmpty())
             return null;
-        var sum = sales.stream().map(SaleQueryResponse.SaleData::getPrice).reduce(BigInteger::add).get();
+        var sum = sales.stream().map(SaleData::getPrice).reduce(BigInteger::add).get();
         var avg = new BigDecimal(sum).divide(BigDecimal.valueOf(sales.size()), PRECISION).divide(ETH_IN_WEI, PRECISION);
 
         var result = new HashMap<String, BigDecimal>();
@@ -45,23 +44,55 @@ public class NftService
         return result;
     }
 
-    private SaleQueryResponse fetchTokenPriceData(String collection, BigInteger tokenId)
+    private SalesData fetchTokenPriceData(String collection, BigInteger tokenId)
     {
-        try {
-            var response = subgraphService.fetchQueryResponse(getTokenQuery(collection, tokenId));
-            return objectMapper.readValue(response, SaleQueryResponse.class);
-        } catch (URISyntaxException | IOException | InterruptedException ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
-    private String getTokenQuery(String collection, BigInteger tokenId)
-    {
-        return String.format("{\n" +
+        String query = String.format("{\n" +
                 "  sales(orderBy: timestamp, orderDirection: desc, where: {collection: \"%s\", tokenId: \"%s\", price_not: null}) {\n" +
                 "    timestamp\n" +
                 "    price\n" +
                 "  }\n" +
                 "}", collection, tokenId.toString());
+        return subgraphClient.send(endpoint, query, SalesData.class);
+    }
+
+    private static class SalesData
+    {
+        private List<SaleData> sales;
+
+        public List<SaleData> getSales()
+        {
+            return sales;
+        }
+
+        public void setSales(List<SaleData> sales)
+        {
+            this.sales = sales;
+        }
+    }
+
+    private static class SaleData
+    {
+        private Timestamp timestamp; // FIXME
+        private BigInteger price;
+
+        public Timestamp getTimestamp()
+        {
+            return timestamp;
+        }
+
+        public void setTimestamp(Timestamp timestamp)
+        {
+            this.timestamp = timestamp;
+        }
+
+        public BigInteger getPrice()
+        {
+            return price;
+        }
+
+        public void setPrice(BigInteger price)
+        {
+            this.price = price;
+        }
     }
 }

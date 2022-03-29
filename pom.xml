@@ -30,9 +30,6 @@
         <module>data-gemini</module>
         <module>data-kraken</module>
 
-        <module>data-uniswap</module>
-        <module>data-sushiswap</module>
-
         <module>data-app</module>
     </modules>
 

@@ -16,6 +16,7 @@
         <ignite.version>2.12.0</ignite.version>
         <logback.version>1.2.10</logback.version>
         <guava.version>31.1-jre</guava.version>
+        <caffeine.version>3.0.6</caffeine.version>
         <xchange.version>5.0.13</xchange.version>
     </properties>
 
@@ -34,6 +35,11 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>${guava.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>${caffeine.version}</version>
         </dependency>
 
         <dependency>

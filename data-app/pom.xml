@@ -55,11 +55,6 @@
             <artifactId>data-gemini</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
-        <dependency>
-            <groupId>net.muon.data</groupId>
-            <artifactId>data-uniswap</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <dependency>
             <groupId>net.muon.data</groupId>
@@ -82,11 +77,6 @@
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
             <version>4.9.1</version>
-        </dependency>
-        <dependency>
-            <groupId>net.muon.data</groupId>
-            <artifactId>data-sushiswap</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
     </dependencies>

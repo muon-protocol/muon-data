@@ -6,7 +6,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@OpenAPIDefinition(servers = {@Server(url = "/", description = "Default Server URL")})
+@OpenAPIDefinition(servers = {
+        @Server(url = "/", description = "Default Server URL")
+})
 @SpringBootApplication
 @EnableScheduling
 public class MuonDataApplication
