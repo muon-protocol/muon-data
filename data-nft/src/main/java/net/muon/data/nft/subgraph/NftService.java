@@ -7,13 +7,14 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.net.URI;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class NftService
 {
-    protected static final BigDecimal ETH_IN_WEI = BigDecimal.valueOf(1000000000000000000L);
+    private static final BigDecimal ETH_IN_WEI = BigDecimal.valueOf(1000000000000000000L);
     private static final MathContext PRECISION = new MathContext(5);
     private static final int PAGE_SIZE = 1000;
 
@@ -29,20 +30,20 @@ public class NftService
     public Map<String, BigDecimal> getPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
     {
         checkTimePeriod(fromTimestamp, toTimestamp);
-        var allSales = new ArrayList<SalesData.SaleData>();
-        List<SalesData.SaleData> sales;
+        var allSales = new ArrayList<SaleData>();
+        List<SaleData> sales;
         do {
-            var priceData = fetchTokenPriceData(collectionId, nftId, fromTimestamp, toTimestamp, allSales.size());
-            if (priceData == null || priceData.getData().getToken() == null)
+            var tokenData = fetchTokenPriceData(collectionId, nftId, fromTimestamp, toTimestamp, allSales.size());
+            if (tokenData == null || tokenData.getToken() == null)
                 return null;
-            sales = priceData.getData().getToken().getSales();
+            sales = tokenData.getToken().getSales();
             allSales.addAll(sales);
         } while (sales.size() == PAGE_SIZE);
 
         if (allSales.isEmpty())
             return null;
 
-        var sum = allSales.stream().map(SalesData.SaleData::getPrice).reduce(BigInteger::add).get();
+        var sum = allSales.stream().map(SaleData::getPrice).reduce(BigInteger::add).get();
         var avg = new BigDecimal(sum).divide(BigDecimal.valueOf(allSales.size()), PRECISION).divide(ETH_IN_WEI, PRECISION);
 
         var result = new HashMap<String, BigDecimal>();
@@ -62,28 +63,48 @@ public class NftService
         var sales = priceData.getSales();
         if (sales.isEmpty())
             return null;
-        var sum = sales.stream().map(SaleData::getPrice).reduce(BigInteger::add).get();
-        var avg = new BigDecimal(sum).divide(BigDecimal.valueOf(sales.size()), PRECISION).divide(ETH_IN_WEI, PRECISION);
         return new BigDecimal(sales.get(0).getPrice()).divide(ETH_IN_WEI, PRECISION);
     }
 
-        var result = new HashMap<String, BigDecimal>();
-        result.put("lastPrice", new BigDecimal(sales.get(0).getPrice()).divide(ETH_IN_WEI, PRECISION));
-        result.put("averagePrice", avg);
-        result.put("count", BigDecimal.valueOf(sales.size()));
+    private TokenData fetchTokenPriceData(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp, long skip)
+    {
+        var timeFilter = fromTimestamp == null || toTimestamp == null ? "" :
+                String.format(", where: {timestamp_gte: %d, timestamp_lte: %d}", fromTimestamp, toTimestamp);
 
-        return result;
+        String query = String.format("{\n" +
+                "   token(id: \"%s:%s\") {\n" +
+                "       sales (skip: %d, first: %d , orderBy: timestamp, orderDirection: desc%s) {" +
+                "           price\n" +
+                "       }\n" +
+                "   }\n" +
+                "}", collection, tokenId, skip, PAGE_SIZE, timeFilter);
+
+        return subgraphClient.send(endpoint, query, TokenData.class);
     }
 
-    private SalesData fetchTokenPriceData(String collection, BigInteger tokenId)
+    private SalesData fetchFloorPrice(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp)
     {
+        var timeFilter = fromTimestamp == null || toTimestamp == null ? "" :
+                String.format(", timestamp_gte: %d, timestamp_lte: %d", fromTimestamp, toTimestamp);
+
+        var tokenFilter = tokenId == null ?
+                String.format("token_starts_with: \"%s:\"", collection.toLowerCase()) :
+                String.format("token: \"%s:%s\"", collection.toLowerCase(), tokenId);
+
         String query = String.format("{\n" +
-                "  sales(orderBy: timestamp, orderDirection: desc, where: {collection: \"%s\", tokenId: \"%s\", price_not: null}) {\n" +
-                "    timestamp\n" +
-                "    price\n" +
-                "  }\n" +
-                "}", collection, tokenId.toString());
+                "   sales(first: 1, orderBy: price, orderDirection: asc, where : {%s%s}){\n" +
+                "       price\n" +
+                "   }\n" +
+                "}", tokenFilter, timeFilter);
+
         return subgraphClient.send(endpoint, query, SalesData.class);
+    }
+
+    private void checkTimePeriod(Long fromTimestamp, Long toTimestamp)
+    {
+        if (fromTimestamp == null && toTimestamp == null) return;
+        if (fromTimestamp == null || toTimestamp == null || fromTimestamp > toTimestamp)
+            throw new IllegalArgumentException("Invalid time period");
     }
 
     private static class SalesData
@@ -124,6 +145,21 @@ public class NftService
         public void setPrice(BigInteger price)
         {
             this.price = price;
+        }
+    }
+
+    private static class TokenData
+    {
+        private SalesData token;
+
+        public SalesData getToken()
+        {
+            return token;
+        }
+
+        public void setToken(SalesData token)
+        {
+            this.token = token;
         }
     }
 }
