@@ -4,6 +4,7 @@ import org.knowm.xchange.dto.marketdata.Trade;
 
 import java.math.BigDecimal;
 
+@Deprecated
 public class CryptoQuote extends Quote
 {
     public CryptoQuote(Quote q)

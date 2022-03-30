@@ -3,6 +3,7 @@ package net.muon.data.core;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+@Deprecated
 public class Quote
 {
     private String symbol;

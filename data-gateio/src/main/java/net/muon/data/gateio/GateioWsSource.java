@@ -1,80 +1,73 @@
 package net.muon.data.gateio;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import net.muon.data.core.CryptoQuote;
-import net.muon.data.core.CryptoSource;
 import net.muon.data.core.PropertyPathValueResolver;
-import net.muon.data.core.QuoteChangeListener;
+import net.muon.data.core.incubator.TokenPair;
+import net.muon.data.core.incubator.TokenPairPrice;
+import net.muon.data.core.incubator.TokenPriceSource;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.java_websocket.handshake.ServerHandshake;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.math.BigDecimal;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.Executor;
 
-public class GateioSource extends CryptoSource
+public class GateioWsSource implements TokenPriceSource
 {
-    private WebSocketClient client;
-    private static final Logger LOGGER = LoggerFactory.getLogger(GateioSource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(GateioWsSource.class);
+
+    private final IgniteCache<TokenPair, TokenPairPrice> cache;
+    private final List<TokenPair> subscriptionPairs;
     private final ObjectMapper mapper;
     private final Map<String, String> symbolDictionary = new HashMap<>();
+
+    private WebSocketClient client;
     private boolean singleSubscriptionMode = false;
 
-    public GateioSource(Ignite ignite,
-                        ObjectMapper mapper,
-                        List<String> exchanges,
-                        List<String> symbols,
-                        List<QuoteChangeListener> changeListeners)
+    public GateioWsSource(Ignite ignite, List<TokenPair> subscriptionPairs,
+                          ObjectMapper objectMapper, Executor executor)
     {
-        super("gateio", exchanges, ignite, symbols, changeListeners, null, null, null);
-        this.mapper = mapper;
-        symbols.stream()
+        var cacheConfig = new CacheConfiguration<TokenPair, TokenPairPrice>("gateio_cache");
+        cacheConfig.setCacheMode(CacheMode.REPLICATED);
+        this.cache = ignite.getOrCreateCache(cacheConfig);
+
+        this.subscriptionPairs = subscriptionPairs;
+        this.mapper = objectMapper;
+        subscriptionPairs.stream()
+                .map(TokenPair::toString)
                 .map(CurrencyPair::new)
                 .forEach(pair -> symbolDictionary.put((pair.base.toString() + "_" + pair.counter.toString()).toUpperCase(), pair.base + "-" + pair.counter));
+
+        executor.execute(() -> {
+            try {
+                connect();
+            } catch (RuntimeException ex) {
+                disconnect();
+            }
+        });
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public CryptoQuote load(String symbol)
+    public TokenPairPrice getTokenPairPrice(TokenPair pair)
     {
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI("https://api.gateio.ws/api/v4/spot/trades?currency_pair=" + symbol.replace('-', '_') + "&limit=1"))
-                    .GET()
-                    .build();
-            HttpClient httpClient = HttpClient.newBuilder().build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            List list = mapper.readValue(response.body(), new TypeReference<>() {});
-            if (list == null || list.isEmpty())
-                return null;
-            Map<String, Object> result = (Map<String, Object>) list.get(0);
-            BigDecimal price = (BigDecimal) result.get("price");
-            long time = (long) result.get("create_time_ms");
-            return new CryptoQuote(symbol, price, time);
-        } catch (URISyntaxException | IOException | InterruptedException ex) {
-            throw new RuntimeException(ex);
-        }
+        return cache.get(pair);
     }
 
-    @Override
     public void connect()
     {
-        LOGGER.debug("Symbols: {}", symbols);
+        LOGGER.debug("Symbols: {}", subscriptionPairs);
         startWebSocket();
     }
 
-    @Override
     public void disconnect()
     {
         if (client != null) {
@@ -95,7 +88,7 @@ public class GateioSource extends CryptoSource
         client.connect();
     }
 
-    private List<CryptoQuote> parseSafe(String message)
+    private List<TokenPairPrice> parseSafe(String message)
     {
         // TODO: EXCEPTION HANDLING (if protocol changes)
         GateioResponse response;
@@ -160,23 +153,13 @@ public class GateioSource extends CryptoSource
             return Collections.emptyList();
         }
 
-        var quote = new CryptoQuote();
-        quote.setPrice(result.getPrice());
-        quote.setTime(result.getTime().longValue());
-        quote.setSymbol(symbolDictionary.get(result.getPair().toUpperCase()));
-        return Collections.singletonList(quote);
+        TokenPair pair = TokenPair.parse(symbolDictionary.get(result.getPair().toUpperCase()));
+        TokenPairPrice tokenPrice = new TokenPairPrice(pair, result.getPrice(),
+                Instant.ofEpochMilli(result.getTime().longValue()));
+
+        return Collections.singletonList(tokenPrice);
     }
 
-    @Override
-    public Map<String, String> getInfo()
-    {
-        Map<String, String> info = new HashMap<>();
-        info.put("id", id);
-        info.put("name", "Gateio");
-        return info;
-    }
-
-    @Override
     protected void subscribe()
     {
         if (singleSubscriptionMode) {
@@ -241,9 +224,9 @@ public class GateioSource extends CryptoSource
         @Override
         public void onMessage(String message)
         {
-            var quotes = parseSafe(message);
-            LOGGER.debug("Received data: {}", quotes);
-            quotes.forEach(GateioSource.this::addQuote);
+            var prices = parseSafe(message);
+            LOGGER.debug("Received data: {}", prices);
+            prices.forEach(price -> cache.put(price.pair(), price));
         }
 
         @Override

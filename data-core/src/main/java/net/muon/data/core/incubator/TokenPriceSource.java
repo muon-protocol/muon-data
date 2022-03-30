@@ -1,6 +1,6 @@
 package net.muon.data.core.incubator;
 
-public interface HttpSource
+public interface TokenPriceSource
 {
     TokenPairPrice getTokenPairPrice(TokenPair pair);
 }

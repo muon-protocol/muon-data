@@ -6,7 +6,6 @@ import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -20,7 +19,7 @@ public class NftServiceTest
     private static final String STORAGE_PATH = "/tmp/muon-data";
     private static final Ignite ignite = getIgnite();
 
-    @Test
+    //    @Test
     public void test() throws IOException
     {
         NftService nftService = getNftService(COLLECTION);
@@ -35,7 +34,7 @@ public class NftServiceTest
         Assertions.assertEquals(nftService.getPrice(COLLECTION, BigInteger.valueOf(1109)), BigDecimal.valueOf(87));
     }
 
-    @Test
+    //    @Test
     public void testSingleToken()
     {
         var start = BigInteger.valueOf(13110840);
@@ -48,7 +47,7 @@ public class NftServiceTest
         Assertions.assertEquals(nftService.getPrice(COLLECTION, BigInteger.valueOf(3368)), BigDecimal.valueOf(34));
     }
 
-    @Test
+    //    @Test
     public void testAverageCalculation()
     {
         NftService nftService = getNftService(COLLECTION);

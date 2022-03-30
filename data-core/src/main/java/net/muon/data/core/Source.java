@@ -17,9 +17,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Deprecated
 public abstract class Source<Q extends Quote>
 {
-
     protected final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
     protected final IgniteCache<String, Q> cache;
     protected final List<String> enabledExchanges;

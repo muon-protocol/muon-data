@@ -3,24 +3,32 @@ package net.muon.data.gemini;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import net.muon.data.core.CryptoQuote;
-import net.muon.data.core.CryptoSource;
-import net.muon.data.core.QuoteChangeListener;
+import net.muon.data.core.incubator.TokenPair;
+import net.muon.data.core.incubator.TokenPairPrice;
+import net.muon.data.core.incubator.TokenPriceSource;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.java_websocket.handshake.ServerHandshake;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.Executor;
 
-public class GeminiSource extends CryptoSource
+public class GeminiWsSource implements TokenPriceSource
 {
-    private WebSocketClient client;
-    private static final Logger LOGGER = LoggerFactory.getLogger(GeminiSource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(GeminiWsSource.class);
+
+    private final IgniteCache<TokenPair, TokenPairPrice> cache;
     private final ObjectMapper mapper;
     private final Map<String, String> symbolDictionary = new HashMap<>();
+
+    private WebSocketClient client;
 
     private final List<String> supportedPairs = List.of(
             "btcusd", "ethbtc", "ethusd", "zecusd",
@@ -53,12 +61,15 @@ public class GeminiSource extends CryptoSource
     );
 
 
-    public GeminiSource(Ignite ignite, ObjectMapper mapper, List<String> exchanges, List<String> symbols,
-                        List<QuoteChangeListener> changeListeners)
+    public GeminiWsSource(Ignite ignite, List<TokenPair> subscriptionPairs, ObjectMapper mapper, Executor executor)
     {
-        super("gemini", exchanges, ignite, symbols, changeListeners, null, null, null);
+        var cacheConfig = new CacheConfiguration<TokenPair, TokenPairPrice>("gemini_cache");
+        cacheConfig.setCacheMode(CacheMode.REPLICATED);
+        this.cache = ignite.getOrCreateCache(cacheConfig);
         this.mapper = mapper;
-        symbols.stream()
+
+        subscriptionPairs.stream()
+                .map(TokenPair::toString)
                 .map(CurrencyPair::new)
                 .forEach(pair -> {
                     String pairRep = pair.base + "" + pair.counter;
@@ -70,9 +81,22 @@ public class GeminiSource extends CryptoSource
                         LOGGER.warn("Unsupported pair:{}", pair);
                     }
                 });
+
+        executor.execute(() -> {
+            try {
+                connect();
+            } catch (RuntimeException ex) {
+                disconnect();
+            }
+        });
     }
 
     @Override
+    public TokenPairPrice getTokenPairPrice(TokenPair pair)
+    {
+        return cache.get(pair);
+    }
+
     public void connect()
     {
         if (symbolDictionary.size() == 0) {
@@ -83,7 +107,6 @@ public class GeminiSource extends CryptoSource
         startWebSocket();
     }
 
-    @Override
     public void disconnect()
     {
         if (client != null) {
@@ -104,7 +127,7 @@ public class GeminiSource extends CryptoSource
         client.connect();
     }
 
-    private List<CryptoQuote> parseSafe(String message)
+    private List<TokenPairPrice> parseSafe(String message)
     {
         // TODO: EXCEPTION HANDLING (if protocol changes)
         GeminiResponse response;
@@ -119,7 +142,7 @@ public class GeminiSource extends CryptoSource
             return Collections.emptyList();
         }
 
-        var quotes = new ArrayList<CryptoQuote>();
+        var prices = new ArrayList<TokenPairPrice>();
         for (var event : response.getEvents()) {
             if (!"change".equals(event.getType())) {
                 LOGGER.warn("Unexpected event type received in: {}", event);
@@ -132,26 +155,14 @@ public class GeminiSource extends CryptoSource
             } else {
                 symbol = symbolDictionary.values().stream().findFirst().get();
             }
-
-            var quote = new CryptoQuote(symbol, event.getPrice(), response.getTime());
-
-            if (quote.getSymbol() == null) {
+            if (symbol == null) {
                 LOGGER.warn("Unexpected event symbol received in: {}", event);
             } else {
-                quotes.add(quote);
+                prices.add(new TokenPairPrice(TokenPair.parse(symbol), event.getPrice(), Instant.ofEpochMilli(response.getTime())));
             }
         }
 
-        return quotes;
-    }
-
-    @Override
-    public Map<String, String> getInfo()
-    {
-        Map<String, String> info = new HashMap<>();
-        info.put("id", id);
-        info.put("name", "Gemini");
-        return info;
+        return prices;
     }
 
     private class WebSocketClient extends org.java_websocket.client.WebSocketClient
@@ -178,9 +189,9 @@ public class GeminiSource extends CryptoSource
         @Override
         public void onMessage(String message)
         {
-            var quotes = parseSafe(message);
-            LOGGER.debug("Received data: {}", quotes);
-            quotes.forEach(GeminiSource.this::addQuote);
+            var prices = parseSafe(message);
+            LOGGER.debug("Received data: {}", prices);
+            prices.forEach(price -> cache.put(price.pair(), price));
         }
 
         @Override

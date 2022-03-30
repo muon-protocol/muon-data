@@ -1,4 +1,4 @@
-package net.muon.data.app;
+package net.muon.data.app.nft;
 
 import net.muon.data.core.SubgraphClient;
 import net.muon.data.nft.subgraph.NftService;

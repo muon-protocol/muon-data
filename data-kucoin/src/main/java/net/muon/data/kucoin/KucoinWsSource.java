@@ -4,8 +4,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import net.muon.data.core.*;
+import net.muon.data.core.PropertyPathValueResolver;
+import net.muon.data.core.incubator.TokenPair;
+import net.muon.data.core.incubator.TokenPairPrice;
+import net.muon.data.core.incubator.TokenPriceSource;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,38 +23,52 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
-public class KucoinSource extends CryptoSource
+public class KucoinWsSource implements TokenPriceSource
 {
-    private WebSocketClient client;
-    private static final Logger LOGGER = LoggerFactory.getLogger(KucoinSource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(KucoinWsSource.class);
+
+    private final IgniteCache<TokenPair, TokenPairPrice> cache;
+    private final List<TokenPair> subscriptionPairs;
     private final ObjectMapper mapper;
+    private WebSocketClient client;
     private boolean singleSubscriptionMode = false;
 
-    public KucoinSource(Ignite ignite, ObjectMapper mapper, List<String> exchanges,
-                        List<String> symbols, List<QuoteChangeListener> changeListeners)
+    public KucoinWsSource(Ignite ignite, List<TokenPair> subscriptionPairs,
+                          ObjectMapper objectMapper, Executor executor)
     {
-        super("kucoin", exchanges, ignite, symbols, changeListeners, null, null, null);
-        this.mapper = mapper;
+        var cacheConfig = new CacheConfiguration<TokenPair, TokenPairPrice>("kucoin_cache");
+        cacheConfig.setCacheMode(CacheMode.REPLICATED);
+        this.cache = ignite.getOrCreateCache(cacheConfig);
+
+        this.subscriptionPairs = subscriptionPairs;
+        this.mapper = objectMapper;
+        executor.execute(() -> {
+            try {
+                connect();
+            } catch (RuntimeException ex) {
+                disconnect();
+            }
+        });
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public CryptoQuote load(String symbol)
+    public TokenPairPrice getTokenPairPrice(TokenPair pair)
     {
-        return null;
+        return cache.get(pair);
     }
 
-    @Override
     public void connect()
     {
-        LOGGER.debug("Symbols: {}", symbols);
+        LOGGER.debug("Symbols: {}", subscriptionPairs);
         startWebSocket();
     }
 
-    @Override
     public void disconnect()
     {
         if (client != null) {
@@ -86,38 +106,28 @@ public class KucoinSource extends CryptoSource
         }
     }
 
-    @Override
-    public Map<String, String> getInfo()
-    {
-        Map<String, String> info = new HashMap<>();
-        info.put("id", id);
-        info.put("name", "kucoin");
-//        info.put("wss-uri", URI_BUILDER.build().toUri().toString());
-        return info;
-    }
-
-    @Override
     protected void subscribe()
     {
         if (singleSubscriptionMode) {
-            for (String symbol : symbols) {
+            for (TokenPair pair : subscriptionPairs) {
                 try {
-                    doSubscribe(Collections.singletonList(symbol));
+                    doSubscribe(Collections.singletonList(pair));
                 } catch (Exception e) {
                     LOGGER.warn("Exception suppressed", e);
                 }
             }
         }
-        doSubscribe(symbols);
+        doSubscribe(subscriptionPairs);
     }
 
-    private void doSubscribe(List<String> symbols)
+    private void doSubscribe(List<TokenPair> symbols)
     {
+        String topic = symbols.stream().map(TokenPair::toString).collect(Collectors.joining(",")).toUpperCase();
         try {
             Map<String, Object> msg = new HashMap<>();
             msg.put("id", ThreadLocalRandom.current().nextInt());
             msg.put("type", "subscribe");
-            msg.put("topic", "/market/ticker:" + String.join(",", symbols).toUpperCase());
+            msg.put("topic", "/market/ticker:" + topic);
             msg.put("privateChannel", false);
             msg.put("response", true);
             String text = mapper.writeValueAsString(msg);
@@ -164,7 +174,7 @@ public class KucoinSource extends CryptoSource
         private void parseSafe(String message)
         {
             try {
-                Map<String, Object> map = mapper.readValue(message, Map.class);
+                Map<String, Object> map = mapper.readValue(message, new TypeReference<>() {});
                 String topic = resolver.get(map, "topic");
                 Object data = resolver.get(map, "data");
                 if (!"message".equals(resolver.get(map, "type"))
@@ -182,14 +192,12 @@ public class KucoinSource extends CryptoSource
                         LOGGER.warn("Unhandled msg received in: {}", message);
                     return;
                 }
-                var pair = topic.split(":")[1];
-                var quote = new CryptoQuote();
-                quote.setPrice(new BigDecimal((String) resolver.get((Map<String, Object>) data, "price")));
-                quote.setTime(resolver.get((Map<String, Object>) data, "time"));
-                quote.setSymbol(pair.toUpperCase());
-                var quotes = Collections.singletonList(quote);
-                LOGGER.debug("Received data: {}", quotes);
-                quotes.forEach(KucoinSource.this::addQuote);
+                TokenPair pair = TokenPair.parse(topic.split(":")[1]);
+                BigDecimal price = new BigDecimal((String) resolver.get((Map<String, Object>) data, "price"));
+                Long time = resolver.get((Map<String, Object>) data, "time");
+                TokenPairPrice tokenPrice = new TokenPairPrice(pair, price, Instant.ofEpochMilli(time));
+                LOGGER.debug("Received data: {}", tokenPrice);
+                cache.put(pair, tokenPrice);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -197,6 +205,7 @@ public class KucoinSource extends CryptoSource
 
         private void ping()
         {
+            // FIXME what is this id??
             send("{" +
                     "\"id\":\"1545910590801\"," +
                     "\"type\":\"ping\"" +

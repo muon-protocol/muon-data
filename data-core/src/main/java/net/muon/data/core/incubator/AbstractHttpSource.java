@@ -5,7 +5,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 
 import java.time.Duration;
 
-public abstract class AbstractHttpSource implements HttpSource
+public abstract class AbstractHttpSource implements TokenPriceSource
 {
     protected abstract TokenPairPrice load(TokenPair pair);
 
@@ -20,7 +20,7 @@ public abstract class AbstractHttpSource implements HttpSource
     }
 
     @Override
-    public TokenPairPrice getTokenPairPrice(TokenPair pair)
+    public final TokenPairPrice getTokenPairPrice(TokenPair pair)
     {
         return cache.get(pair);
     }
