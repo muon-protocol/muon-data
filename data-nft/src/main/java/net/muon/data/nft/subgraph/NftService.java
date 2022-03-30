@@ -2,11 +2,13 @@ package net.muon.data.nft.subgraph;
 
 import net.muon.data.core.SubgraphClient;
 
+import javax.ws.rs.BadRequestException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.net.URI;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +31,7 @@ public class NftService
 
     public Map<String, BigDecimal> getPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
     {
-        checkTimePeriod(fromTimestamp, toTimestamp);
+        toTimestamp = checkTimePeriod(fromTimestamp, toTimestamp);
         var allSales = new ArrayList<SaleData>();
         List<SaleData> sales;
         do {
@@ -56,7 +58,7 @@ public class NftService
 
     public BigDecimal getFloorPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
     {
-        checkTimePeriod(fromTimestamp, toTimestamp);
+        toTimestamp = checkTimePeriod(fromTimestamp, toTimestamp);
         var priceData = fetchFloorPrice(collectionId, nftId, fromTimestamp, toTimestamp);
         if (priceData == null)
             return null;
@@ -68,12 +70,12 @@ public class NftService
 
     private TokenData fetchTokenPriceData(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp, long skip)
     {
-        var timeFilter = fromTimestamp == null || toTimestamp == null ? "" :
-                String.format(", where: {timestamp_gte: %d, timestamp_lte: %d}", fromTimestamp, toTimestamp);
+        var fromTimeFilter = fromTimestamp != null ? String.format("timestamp_gte: %d, ", fromTimestamp) : "";
+        var timeFilter = fromTimeFilter + String.format("timestamp_lte: %d", toTimestamp);
 
         String query = String.format("{\n" +
                 "   token(id: \"%s:%s\") {\n" +
-                "       sales (skip: %d, first: %d , orderBy: timestamp, orderDirection: desc%s) {" +
+                "       sales (skip: %d, first: %d , orderBy: timestamp, orderDirection: desc, where: {%s}) {" +
                 "           price\n" +
                 "       }\n" +
                 "   }\n" +
@@ -84,15 +86,15 @@ public class NftService
 
     private SalesData fetchFloorPrice(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp)
     {
-        var timeFilter = fromTimestamp == null || toTimestamp == null ? "" :
-                String.format(", timestamp_gte: %d, timestamp_lte: %d", fromTimestamp, toTimestamp);
+        var fromTimeFilter = fromTimestamp != null ? String.format("timestamp_gte: %d, ", fromTimestamp) : "";
+        var timeFilter = fromTimeFilter + String.format("timestamp_lte: %d", toTimestamp);
 
         var tokenFilter = tokenId == null ?
                 String.format("token_starts_with: \"%s:\"", collection.toLowerCase()) :
                 String.format("token: \"%s:%s\"", collection.toLowerCase(), tokenId);
 
         String query = String.format("{\n" +
-                "   sales(first: 1, orderBy: price, orderDirection: asc, where : {%s%s}){\n" +
+                "   sales(first: 1, orderBy: price, orderDirection: asc, where : {%s, %s}){\n" +
                 "       price\n" +
                 "   }\n" +
                 "}", tokenFilter, timeFilter);
@@ -100,11 +102,12 @@ public class NftService
         return subgraphClient.send(endpoint, query, SalesData.class);
     }
 
-    private void checkTimePeriod(Long fromTimestamp, Long toTimestamp)
+    private Long checkTimePeriod(Long fromTimestamp, Long toTimestamp)
     {
-        if (fromTimestamp == null && toTimestamp == null) return;
-        if (fromTimestamp == null || toTimestamp == null || fromTimestamp > toTimestamp)
-            throw new IllegalArgumentException("Invalid time period");
+        if (fromTimestamp != null && toTimestamp != null && fromTimestamp > toTimestamp)
+            throw new BadRequestException("Invalid time period"); // FIXME ?
+        long now = Instant.now().toEpochMilli() / 1000;
+        return toTimestamp == null || toTimestamp > now ? now : toTimestamp;
     }
 
     private static class SalesData
