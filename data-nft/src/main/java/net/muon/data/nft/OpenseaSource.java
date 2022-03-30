@@ -1,4 +1,4 @@
-package net.muon.data.nft.subgraph;
+package net.muon.data.nft;
 
 import net.muon.data.core.SubgraphClient;
 
@@ -9,12 +9,9 @@ import java.math.MathContext;
 import java.net.URI;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-public class NftService
+public class OpenseaSource
 {
     private static final BigDecimal ETH_IN_WEI = BigDecimal.valueOf(1000000000000000000L);
     private static final MathContext PRECISION = new MathContext(5);
@@ -23,37 +20,37 @@ public class NftService
     private final URI endpoint;
     private final SubgraphClient subgraphClient;
 
-    public NftService(SubgraphClient subgraphClient, String endpoint)
+    public OpenseaSource(SubgraphClient subgraphClient, String endpoint)
     {
         this.endpoint = URI.create(endpoint);
         this.subgraphClient = subgraphClient;
     }
 
-    public Map<String, BigDecimal> getPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
+    public NftPrice getPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
     {
         toTimestamp = checkTimePeriod(fromTimestamp, toTimestamp);
-        var allSales = new ArrayList<SaleData>();
+
+        BigInteger latestPrice = null;
+        BigInteger sum = BigInteger.ZERO;
+        int count = 0;
         List<SaleData> sales;
         do {
-            var tokenData = fetchTokenPriceData(collectionId, nftId, fromTimestamp, toTimestamp, allSales.size());
+            var tokenData = fetchTokenPriceData(collectionId, nftId, fromTimestamp, toTimestamp, count);
             if (tokenData == null || tokenData.getToken() == null)
                 return null;
             sales = tokenData.getToken().getSales();
-            allSales.addAll(sales);
+            sum = sales.stream().map(SaleData::getPrice).reduce(sum, BigInteger::add);
+            if (count == 0 && !sales.isEmpty())
+                latestPrice = sales.get(0).getPrice();
+            count += sales.size();
         } while (sales.size() == PAGE_SIZE);
 
-        if (allSales.isEmpty())
+        if (count == 0)
             return null;
 
-        var sum = allSales.stream().map(SaleData::getPrice).reduce(BigInteger::add).get();
-        var avg = new BigDecimal(sum).divide(BigDecimal.valueOf(allSales.size()), PRECISION).divide(ETH_IN_WEI, PRECISION);
-
-        var result = new HashMap<String, BigDecimal>();
-        result.put("lastPrice", new BigDecimal(allSales.get(0).getPrice()).divide(ETH_IN_WEI, PRECISION));
-        result.put("averagePrice", avg);
-        result.put("count", BigDecimal.valueOf(allSales.size()));
-
-        return result;
+        var avg = new BigDecimal(sum).divide(BigDecimal.valueOf(count), PRECISION).divide(ETH_IN_WEI, PRECISION);
+        BigDecimal lastPrice = new BigDecimal(latestPrice).divide(ETH_IN_WEI, PRECISION);
+        return new NftPrice(lastPrice, avg, count);
     }
 
     public BigDecimal getFloorPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
