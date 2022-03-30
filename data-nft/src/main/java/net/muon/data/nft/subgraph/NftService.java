@@ -15,6 +15,7 @@ public class NftService
 {
     protected static final BigDecimal ETH_IN_WEI = BigDecimal.valueOf(1000000000000000000L);
     private static final MathContext PRECISION = new MathContext(5);
+    private static final int PAGE_SIZE = 1000;
 
     private final URI endpoint;
     private final SubgraphClient subgraphClient;
@@ -25,9 +26,37 @@ public class NftService
         this.subgraphClient = subgraphClient;
     }
 
-    public Map<String, BigDecimal> getPrice(String collectionId, BigInteger nftId)
+    public Map<String, BigDecimal> getPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
     {
-        var priceData = fetchTokenPriceData(collectionId, nftId);
+        checkTimePeriod(fromTimestamp, toTimestamp);
+        var allSales = new ArrayList<SalesData.SaleData>();
+        List<SalesData.SaleData> sales;
+        do {
+            var priceData = fetchTokenPriceData(collectionId, nftId, fromTimestamp, toTimestamp, allSales.size());
+            if (priceData == null || priceData.getData().getToken() == null)
+                return null;
+            sales = priceData.getData().getToken().getSales();
+            allSales.addAll(sales);
+        } while (sales.size() == PAGE_SIZE);
+
+        if (allSales.isEmpty())
+            return null;
+
+        var sum = allSales.stream().map(SalesData.SaleData::getPrice).reduce(BigInteger::add).get();
+        var avg = new BigDecimal(sum).divide(BigDecimal.valueOf(allSales.size()), PRECISION).divide(ETH_IN_WEI, PRECISION);
+
+        var result = new HashMap<String, BigDecimal>();
+        result.put("lastPrice", new BigDecimal(allSales.get(0).getPrice()).divide(ETH_IN_WEI, PRECISION));
+        result.put("averagePrice", avg);
+        result.put("count", BigDecimal.valueOf(allSales.size()));
+
+        return result;
+    }
+
+    public BigDecimal getFloorPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
+    {
+        checkTimePeriod(fromTimestamp, toTimestamp);
+        var priceData = fetchFloorPrice(collectionId, nftId, fromTimestamp, toTimestamp);
         if (priceData == null)
             return null;
         var sales = priceData.getSales();
@@ -35,6 +64,8 @@ public class NftService
             return null;
         var sum = sales.stream().map(SaleData::getPrice).reduce(BigInteger::add).get();
         var avg = new BigDecimal(sum).divide(BigDecimal.valueOf(sales.size()), PRECISION).divide(ETH_IN_WEI, PRECISION);
+        return new BigDecimal(sales.get(0).getPrice()).divide(ETH_IN_WEI, PRECISION);
+    }
 
         var result = new HashMap<String, BigDecimal>();
         result.put("lastPrice", new BigDecimal(sales.get(0).getPrice()).divide(ETH_IN_WEI, PRECISION));
