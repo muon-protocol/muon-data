@@ -4,14 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import net.muon.data.core.AbstractWsSource;
 import net.muon.data.core.PropertyPathValueResolver;
 import net.muon.data.core.TokenPair;
 import net.muon.data.core.TokenPairPrice;
-import net.muon.data.core.TokenPriceSource;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,50 +22,33 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
-public class KucoinWsSource implements TokenPriceSource
+public class KucoinWsSource extends AbstractWsSource
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(KucoinWsSource.class);
 
-    private final IgniteCache<TokenPair, TokenPairPrice> cache;
-    private final List<TokenPair> subscriptionPairs;
     private final ObjectMapper mapper;
     private WebSocketClient client;
     private boolean singleSubscriptionMode = false;
 
-    public KucoinWsSource(Ignite ignite, List<TokenPair> subscriptionPairs,
-                          ObjectMapper objectMapper, Executor executor)
+    public KucoinWsSource(String id, List<TokenPair> subscriptionPairs,
+                          ExecutorService executor, Ignite ignite, ObjectMapper objectMapper)
     {
-        var cacheConfig = new CacheConfiguration<TokenPair, TokenPairPrice>("kucoin_cache");
-        cacheConfig.setCacheMode(CacheMode.REPLICATED);
-        this.cache = ignite.getOrCreateCache(cacheConfig);
-
-        this.subscriptionPairs = subscriptionPairs;
+        super(id, subscriptionPairs, executor, ignite);
         this.mapper = objectMapper;
-        executor.execute(() -> {
-            try {
-                connect();
-            } catch (RuntimeException ex) {
-                disconnect();
-            }
-        });
     }
 
     @Override
-    public TokenPairPrice getTokenPairPrice(TokenPair pair)
-    {
-        return cache.get(pair);
-    }
-
     public void connect()
     {
         LOGGER.debug("Symbols: {}", subscriptionPairs);
         startWebSocket();
     }
 
+    @Override
     public void disconnect()
     {
         if (client != null) {

@@ -3,13 +3,10 @@ package net.muon.data.gemini;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import net.muon.data.core.AbstractWsSource;
 import net.muon.data.core.TokenPair;
 import net.muon.data.core.TokenPairPrice;
-import net.muon.data.core.TokenPriceSource;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.java_websocket.handshake.ServerHandshake;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.slf4j.Logger;
@@ -18,13 +15,12 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
-public class GeminiWsSource implements TokenPriceSource
+public class GeminiWsSource extends AbstractWsSource
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(GeminiWsSource.class);
 
-    private final IgniteCache<TokenPair, TokenPairPrice> cache;
     private final ObjectMapper mapper;
     private final Map<String, String> symbolDictionary = new HashMap<>();
 
@@ -61,11 +57,9 @@ public class GeminiWsSource implements TokenPriceSource
     );
 
 
-    public GeminiWsSource(Ignite ignite, List<TokenPair> subscriptionPairs, ObjectMapper mapper, Executor executor)
+    public GeminiWsSource(String id, List<TokenPair> subscriptionPairs, ExecutorService executor, Ignite ignite, ObjectMapper mapper)
     {
-        var cacheConfig = new CacheConfiguration<TokenPair, TokenPairPrice>("gemini_cache");
-        cacheConfig.setCacheMode(CacheMode.REPLICATED);
-        this.cache = ignite.getOrCreateCache(cacheConfig);
+        super(id, subscriptionPairs, executor, ignite);
         this.mapper = mapper;
 
         subscriptionPairs.stream()
@@ -81,22 +75,9 @@ public class GeminiWsSource implements TokenPriceSource
                         LOGGER.warn("Unsupported pair:{}", pair);
                     }
                 });
-
-        executor.execute(() -> {
-            try {
-                connect();
-            } catch (RuntimeException ex) {
-                disconnect();
-            }
-        });
     }
 
     @Override
-    public TokenPairPrice getTokenPairPrice(TokenPair pair)
-    {
-        return cache.get(pair);
-    }
-
     public void connect()
     {
         if (symbolDictionary.size() == 0) {
@@ -107,6 +88,7 @@ public class GeminiWsSource implements TokenPriceSource
         startWebSocket();
     }
 
+    @Override
     public void disconnect()
     {
         if (client != null) {

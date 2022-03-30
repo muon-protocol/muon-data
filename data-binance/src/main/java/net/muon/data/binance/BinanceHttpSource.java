@@ -14,9 +14,14 @@ import java.time.Instant;
 
 public class BinanceHttpSource extends AbstractHttpSource
 {
-    private final BinanceExchange exchange;
+    private BinanceExchange exchange;
 
-    public BinanceHttpSource()
+    public BinanceHttpSource(String id)
+    {
+        super(id);
+    }
+
+    public void init()
     {
         this.exchange = ExchangeFactory.INSTANCE.createExchange(BinanceExchange.class);
     }

@@ -1,68 +1,61 @@
 package net.muon.data.app.crypto;
 
-import net.muon.data.binance.BinanceHttpSource;
-import net.muon.data.binance.BinanceWsSource;
-import net.muon.data.core.TokenPair;
-import net.muon.data.core.TokenPriceSource;
-import net.muon.data.gateio.GateioHttpSource;
-import net.muon.data.gateio.GateioWsSource;
-import net.muon.data.gemini.GeminiWsSource;
-import net.muon.data.kraken.KrakenWsSource;
-import net.muon.data.kucoin.KucoinWsSource;
-import org.springframework.beans.factory.annotation.Value;
+import net.muon.data.app.crypto.configuration.CryptoWsProperties;
+import net.muon.data.core.*;
+import org.springframework.boot.context.event.ApplicationStartedEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.annotation.Validated;
 
-import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
 @Service
-@Validated
 public class CryptoTokenService
 {
     private static final MathContext PRECISION = new MathContext(5);
 
-    private final Map<Exchange, TokenPriceSource> websocketSources = new HashMap<>();
-    private final Map<Exchange, TokenPriceSource> httpSources = new HashMap<>();
+    private final Map<Exchange, AbstractWsSource> websocketSources = new HashMap<>();
+    private final Map<Exchange, AbstractHttpSource> httpSources = new HashMap<>();
     private final Integer ignorePriceIfOlderThanMillis;
+    private final ExecutorService executor;
 
-    public CryptoTokenService(@Nullable KucoinWsSource kucoinWsSource,
-                              @Nullable BinanceWsSource binanceWsSource,
-                              @Nullable BinanceHttpSource binanceHttpSource,
-                              @Nullable GateioWsSource gateioWsSource,
-                              @Nullable GateioHttpSource gateioHttpSource,
-                              @Nullable GeminiWsSource geminiWsSource,
-                              @Nullable KrakenWsSource krakenWsSource,
-                              @Nullable UniswapSource uniswapSource,
-                              @Nullable SushiswapSource sushiswapSource,
-                              @Value("${crypto.quote.skip-prices-milisec-age:}") Integer ignorePriceIfOlderThanMillis)
+    public CryptoTokenService(List<AbstractHttpSource> httpSources, List<AbstractWsSource> wsSources,
+                              ExecutorService executor, CryptoWsProperties cryptoWsProperties)
     {
-        this.ignorePriceIfOlderThanMillis = ignorePriceIfOlderThanMillis;
-        if (binanceWsSource != null)
-            websocketSources.put(Exchange.BINANCE, binanceWsSource);
-        if (kucoinWsSource != null)
-            websocketSources.put(Exchange.KUCOIN, kucoinWsSource);
-        if (gateioWsSource != null)
-            websocketSources.put(Exchange.GATEIO, gateioWsSource);
-        if (geminiWsSource != null)
-            websocketSources.put(Exchange.GEMINI, geminiWsSource);
-        if (krakenWsSource != null)
-            websocketSources.put(Exchange.GEMINI, krakenWsSource);
+        this.executor = executor;
+        this.ignorePriceIfOlderThanMillis = cryptoWsProperties.getSkipPricesAfterMillis();
+        Map<String, Exchange> exchangeMap = Arrays.stream(Exchange.values())
+                .collect(Collectors.toMap(Exchange::getId, exchange -> exchange));
+        wsSources.forEach(source -> {
+            Exchange exchange = exchangeMap.get(source.getId());
+            if (exchange != null)
+                this.websocketSources.put(exchange, source);
+        });
+        httpSources.forEach(source -> {
+            Exchange exchange = exchangeMap.get(source.getId());
+            if (exchange != null)
+                this.httpSources.put(exchange, source);
+        });
+    }
 
-        if (binanceHttpSource != null)
-            httpSources.put(Exchange.BINANCE, binanceHttpSource);
-        if (gateioHttpSource != null)
-            httpSources.put(Exchange.GATEIO, gateioHttpSource);
-        if (uniswapSource != null)
-            httpSources.put(Exchange.UNISWAP_V2, uniswapSource);
-        if (sushiswapSource != null)
-            httpSources.put(Exchange.SUSHISWAP, sushiswapSource);
+    @Async
+    @EventListener(ApplicationStartedEvent.class)
+    public void startWsSources()
+    {
+        websocketSources.values().forEach(source -> {
+            executor.submit(() -> {
+                try {
+                    source.connect();
+                } catch (RuntimeException ex) {
+                    source.disconnect();
+                }
+            });
+        });
     }
 
     public TokenPairPriceResponse getPrice(TokenPair pair, Exchange... exchanges)
@@ -72,11 +65,10 @@ public class CryptoTokenService
         if (exchanges.length == 0) {
             // If no exchanges are provided, first try getting prices from web socket sources.
             // If no prices were found, Try a random (first) http source.
-            websocketSources.forEach((exchange, source) ->
-                    prices.add(new ExchangePrice(exchange, source.getTokenPairPrice(pair))));
+            websocketSources.forEach((exchange, source) -> addPrice(prices, exchange, source.getTokenPairPrice(pair)));
             if (prices.isEmpty() && !httpSources.isEmpty()) {
-                Map.Entry<Exchange, TokenPriceSource> sourceEntry = httpSources.entrySet().iterator().next();
-                prices.add(new ExchangePrice(sourceEntry.getKey(), sourceEntry.getValue().getTokenPairPrice(pair)));
+                Map.Entry<Exchange, AbstractHttpSource> sourceEntry = httpSources.entrySet().iterator().next();
+                addPrice(prices, sourceEntry.getKey(), sourceEntry.getValue().getTokenPairPrice(pair));
             }
         } else
             for (Exchange exchange : exchanges) {
@@ -87,10 +79,17 @@ public class CryptoTokenService
                     source = httpSources.get(exchange);
                 else
                     continue;
-                prices.add(new ExchangePrice(exchange, source.getTokenPairPrice(pair)));
+                addPrice(prices, exchange, source.getTokenPairPrice(pair));
             }
 
         return createResponse(pair, prices);
+    }
+
+    private void addPrice(List<ExchangePrice> prices, Exchange exchange, TokenPairPrice pairPrice)
+    {
+        if (pairPrice == null)
+            return;
+        prices.add(new ExchangePrice(exchange, pairPrice));
     }
 
     private TokenPairPriceResponse createResponse(TokenPair pair, List<ExchangePrice> prices)

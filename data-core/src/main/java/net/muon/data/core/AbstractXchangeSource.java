@@ -6,9 +6,6 @@ import info.bitrich.xchangestream.service.netty.ConnectionStateModel;
 import io.reactivex.Completable;
 import io.reactivex.disposables.Disposable;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.exceptions.ExchangeException;
@@ -16,14 +13,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
-public abstract class AbstractXchangeSource implements TokenPriceSource
+public abstract class AbstractXchangeSource extends AbstractWsSource
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractXchangeSource.class);
 
-    protected final IgniteCache<TokenPair, TokenPairPrice> cache;
-    protected final String id;
-    protected final List<TokenPair> subscriptionPairs;
     protected final String apiKey;
     protected final String secret;
 
@@ -31,25 +27,13 @@ public abstract class AbstractXchangeSource implements TokenPriceSource
     protected ProductSubscription subscription;
     protected Disposable subscriptionDisposable;
 
-    public AbstractXchangeSource(String id, Ignite ignite, List<TokenPair> subscriptionPairs, String apiKey, String secret)
+    public AbstractXchangeSource(String id, List<TokenPair> subscriptionPairs, String apiKey, String secret,
+                                 ExecutorService executor, Ignite ignite)
     {
-        var config = new CacheConfiguration<TokenPair, TokenPairPrice>(id + "_cache");
-        config.setCacheMode(CacheMode.REPLICATED);
-        this.cache = ignite.getOrCreateCache(config);
-
-        this.id = id;
-        this.subscriptionPairs = subscriptionPairs;
+        super(id, subscriptionPairs, executor, ignite);
         this.apiKey = apiKey;
         this.secret = secret;
     }
-
-    @Override
-    public TokenPairPrice getTokenPairPrice(TokenPair pair)
-    {
-        return cache.get(pair);
-    }
-
-    public abstract void connect();
 
     protected void connect(Class<? extends StreamingExchange> clazz)
     {
@@ -108,6 +92,7 @@ public abstract class AbstractXchangeSource implements TokenPriceSource
         return builder.build();
     }
 
+    @Override
     public void disconnect()
     {
         try {

@@ -22,8 +22,9 @@ public class GateioHttpSource extends AbstractHttpSource
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
-    public GateioHttpSource(HttpClient httpClient, ObjectMapper objectMapper)
+    public GateioHttpSource(String id, HttpClient httpClient, ObjectMapper objectMapper)
     {
+        super(id);
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
     }

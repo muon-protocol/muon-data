@@ -6,21 +6,14 @@ import net.muon.data.core.TokenPair;
 import org.apache.ignite.Ignite;
 
 import java.util.List;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 public class KrakenWsSource extends AbstractXchangeSource
 {
-    public KrakenWsSource(Ignite ignite, List<TokenPair> subscriptionPairs, Executor executor,
-                          String secret, String apiKey)
+    public KrakenWsSource(String id, List<TokenPair> subscriptionPairs, String secret, String apiKey,
+                          ExecutorService executor, Ignite ignite)
     {
-        super("kraken", ignite, subscriptionPairs, apiKey, secret);
-        executor.execute(() -> {
-            try {
-                connect();
-            } catch (RuntimeException ex) {
-                disconnect();
-            }
-        });
+        super(id, subscriptionPairs, apiKey, secret, executor, ignite);
     }
 
     @Override

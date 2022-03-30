@@ -2,13 +2,12 @@ package net.muon.data.nft;
 
 import net.muon.data.core.SubgraphClient;
 
-import javax.ws.rs.BadRequestException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.net.URI;
-import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 public class OpenseaSource
@@ -30,7 +29,7 @@ public class OpenseaSource
     {
         toTimestamp = checkTimePeriod(fromTimestamp, toTimestamp);
 
-        BigInteger latestPrice = null;
+        SaleData latestPrice = null;
         BigInteger sum = BigInteger.ZERO;
         int count = 0;
         List<SaleData> sales;
@@ -41,7 +40,7 @@ public class OpenseaSource
             sales = tokenData.getToken().getSales();
             sum = sales.stream().map(SaleData::getPrice).reduce(sum, BigInteger::add);
             if (count == 0 && !sales.isEmpty())
-                latestPrice = sales.get(0).getPrice();
+                latestPrice = sales.get(0);
             count += sales.size();
         } while (sales.size() == PAGE_SIZE);
 
@@ -49,20 +48,24 @@ public class OpenseaSource
             return null;
 
         var avg = new BigDecimal(sum).divide(BigDecimal.valueOf(count), PRECISION).divide(ETH_IN_WEI, PRECISION);
-        BigDecimal lastPrice = new BigDecimal(latestPrice).divide(ETH_IN_WEI, PRECISION);
-        return new NftPrice(lastPrice, avg, count);
+        BigDecimal lastPrice = new BigDecimal(latestPrice.getPrice()).divide(ETH_IN_WEI, PRECISION);
+        return new NftPrice(lastPrice, latestPrice.getTimestamp(), avg, count);
     }
 
-    public BigDecimal getFloorPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
+    public NftFloorPrice getFloorPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
     {
         toTimestamp = checkTimePeriod(fromTimestamp, toTimestamp);
         var priceData = fetchFloorPrice(collectionId, nftId, fromTimestamp, toTimestamp);
+
         if (priceData == null)
             return null;
         var sales = priceData.getSales();
         if (sales.isEmpty())
             return null;
-        return new BigDecimal(sales.get(0).getPrice()).divide(ETH_IN_WEI, PRECISION);
+
+        SaleData sale = sales.get(0);
+        BigDecimal price = new BigDecimal(sale.getPrice()).divide(ETH_IN_WEI, PRECISION);
+        return new NftFloorPrice(price, sale.getTimestamp());
     }
 
     private TokenData fetchTokenPriceData(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp, long skip)
@@ -74,6 +77,7 @@ public class OpenseaSource
                 "   token(id: \"%s:%s\") {\n" +
                 "       sales (skip: %d, first: %d , orderBy: timestamp, orderDirection: desc, where: {%s}) {" +
                 "           price\n" +
+                "           timestamp\n" +
                 "       }\n" +
                 "   }\n" +
                 "}", collection, tokenId, skip, PAGE_SIZE, timeFilter);
@@ -93,6 +97,7 @@ public class OpenseaSource
         String query = String.format("{\n" +
                 "   sales(first: 1, orderBy: price, orderDirection: asc, where : {%s, %s}){\n" +
                 "       price\n" +
+                "       timestamp\n" +
                 "   }\n" +
                 "}", tokenFilter, timeFilter);
 
@@ -102,7 +107,7 @@ public class OpenseaSource
     private Long checkTimePeriod(Long fromTimestamp, Long toTimestamp)
     {
         if (fromTimestamp != null && toTimestamp != null && fromTimestamp > toTimestamp)
-            throw new BadRequestException("Invalid time period"); // FIXME ?
+            throw new IllegalArgumentException("Invalid time period");
         long now = Instant.now().toEpochMilli() / 1000;
         return toTimestamp == null || toTimestamp > now ? now : toTimestamp;
     }
@@ -124,15 +129,15 @@ public class OpenseaSource
 
     private static class SaleData
     {
-        private Timestamp timestamp; // FIXME
         private BigInteger price;
+        private Long timestamp;
 
-        public Timestamp getTimestamp()
+        public Long getTimestamp()
         {
             return timestamp;
         }
 
-        public void setTimestamp(Timestamp timestamp)
+        public void setTimestamp(Long timestamp)
         {
             this.timestamp = timestamp;
         }
@@ -161,5 +166,11 @@ public class OpenseaSource
         {
             this.token = token;
         }
+    }
+
+    public static void main(String[] args)
+    {
+        System.out.println(Instant.now().minus(7, ChronoUnit.DAYS).toEpochMilli());
+        ;
     }
 }

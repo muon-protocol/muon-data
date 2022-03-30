@@ -14,8 +14,9 @@ public class DexSource extends AbstractHttpSource
     private final SubgraphClient subgraphClient;
     private final Map<String, String> tokenAddresses;
 
-    public DexSource(SubgraphClient subgraphClient, String endpoint, Map<String, String> tokenAddresses)
+    public DexSource(String id, SubgraphClient subgraphClient, String endpoint, Map<String, String> tokenAddresses)
     {
+        super(id);
         this.subgraphClient = subgraphClient;
         this.endpoint = URI.create(endpoint);
         this.tokenAddresses = tokenAddresses;

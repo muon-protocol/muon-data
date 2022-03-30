@@ -1,23 +1,36 @@
 package net.muon.data.nft;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 public class NftPrice
 {
-    private final BigDecimal lastPrice;
+    private final BigDecimal latestPrice;
+    private final Long latestPriceTime;
     private final BigDecimal averagePrice;
     private final Integer count;
 
-    public NftPrice(BigDecimal lastPrice, BigDecimal averagePrice, Integer count)
+    public NftPrice(BigDecimal latestPrice, Long latestPriceTime, BigDecimal averagePrice, Integer count)
     {
-        this.lastPrice = lastPrice;
+        this.latestPrice = latestPrice;
+        this.latestPriceTime = latestPriceTime;
         this.averagePrice = averagePrice;
         this.count = count;
     }
 
-    public BigDecimal getLastPrice()
+    public BigDecimal getLatestPrice()
     {
-        return lastPrice;
+        return latestPrice;
+    }
+
+    public Long getLatestPriceTime()
+    {
+        return latestPriceTime;
+    }
+
+    public Instant getFormattedLatestPriceTime()
+    {
+        return Instant.ofEpochSecond(latestPriceTime);
     }
 
     public BigDecimal getAveragePrice()

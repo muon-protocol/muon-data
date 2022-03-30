@@ -7,20 +7,14 @@ import org.apache.ignite.Ignite;
 
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 public class BinanceWsSource extends AbstractXchangeSource
 {
-    public BinanceWsSource(Ignite ignite, List<TokenPair> subscriptionPairs, Executor executor,
-                           String secret, String apiKey)
+    public BinanceWsSource(String id, List<TokenPair> subscriptionPairs, String secret, String apiKey,
+                           ExecutorService executor, Ignite ignite)
     {
-        super("binance", ignite, subscriptionPairs, apiKey, secret);
-        executor.execute(() -> {
-            try {
-                connect();
-            } catch (RuntimeException ex) {
-                disconnect();
-            }
-        });
+        super(id, subscriptionPairs, apiKey, secret, executor, ignite);
     }
 
     @Override

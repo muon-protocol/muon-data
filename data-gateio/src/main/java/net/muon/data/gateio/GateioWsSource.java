@@ -3,14 +3,11 @@ package net.muon.data.gateio;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import net.muon.data.core.AbstractWsSource;
 import net.muon.data.core.PropertyPathValueResolver;
 import net.muon.data.core.TokenPair;
 import net.muon.data.core.TokenPairPrice;
-import net.muon.data.core.TokenPriceSource;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.java_websocket.handshake.ServerHandshake;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.slf4j.Logger;
@@ -20,54 +17,36 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
-public class GateioWsSource implements TokenPriceSource
+public class GateioWsSource extends AbstractWsSource
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(GateioWsSource.class);
 
-    private final IgniteCache<TokenPair, TokenPairPrice> cache;
-    private final List<TokenPair> subscriptionPairs;
     private final ObjectMapper mapper;
     private final Map<String, String> symbolDictionary = new HashMap<>();
 
     private WebSocketClient client;
     private boolean singleSubscriptionMode = false;
 
-    public GateioWsSource(Ignite ignite, List<TokenPair> subscriptionPairs,
-                          ObjectMapper objectMapper, Executor executor)
+    public GateioWsSource(String id, List<TokenPair> subscriptionPairs, ExecutorService executor, Ignite ignite, ObjectMapper mapper)
     {
-        var cacheConfig = new CacheConfiguration<TokenPair, TokenPairPrice>("gateio_cache");
-        cacheConfig.setCacheMode(CacheMode.REPLICATED);
-        this.cache = ignite.getOrCreateCache(cacheConfig);
-
-        this.subscriptionPairs = subscriptionPairs;
-        this.mapper = objectMapper;
+        super(id, subscriptionPairs, executor, ignite);
+        this.mapper = mapper;
         subscriptionPairs.stream()
                 .map(TokenPair::toString)
                 .map(CurrencyPair::new)
                 .forEach(pair -> symbolDictionary.put((pair.base.toString() + "_" + pair.counter.toString()).toUpperCase(), pair.base + "-" + pair.counter));
-
-        executor.execute(() -> {
-            try {
-                connect();
-            } catch (RuntimeException ex) {
-                disconnect();
-            }
-        });
     }
 
     @Override
-    public TokenPairPrice getTokenPairPrice(TokenPair pair)
-    {
-        return cache.get(pair);
-    }
-
     public void connect()
     {
         LOGGER.debug("Symbols: {}", subscriptionPairs);
         startWebSocket();
     }
 
+    @Override
     public void disconnect()
     {
         if (client != null) {

@@ -6,18 +6,20 @@ import io.swagger.v3.oas.annotations.servers.Server;
 import net.muon.data.core.SubgraphClient;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.Bean;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.net.http.HttpClient;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @OpenAPIDefinition(servers = {
         @Server(url = "/", description = "Default Server URL")
 })
 @SpringBootApplication
-@EnableScheduling
+@ConfigurationPropertiesScan
+@EnableAsync
 public class MuonDataApplication
 {
     public static void main(String[] args)
@@ -26,7 +28,7 @@ public class MuonDataApplication
     }
 
     @Bean
-    public HttpClient subgraphClient()
+    public HttpClient httpClient()
     {
         return HttpClient.newHttpClient();
     }
@@ -38,8 +40,8 @@ public class MuonDataApplication
     }
 
     @Bean
-    public Executor executor()
+    public ExecutorService executor()
     {
-        return Executors.newFixedThreadPool(8);
+        return Executors.newFixedThreadPool(10);
     }
 }

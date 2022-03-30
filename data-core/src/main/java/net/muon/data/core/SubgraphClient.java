@@ -42,12 +42,12 @@ public class SubgraphClient
             throw new RuntimeException(String.format("Subgraph request failed with code %s. %s",
                     response.statusCode(), responseBody));
 
-        Map<String, String> result = objectMapper.readValue(responseBody, new TypeReference<>() {});
-        String data = result.get("data");
+        Map<String, Object> result = objectMapper.readValue(responseBody, new TypeReference<>() {});
+        var data = result.get("data");
         if (data == null)
             throw new RuntimeException("Unexpected response");
 
-        return objectMapper.readValue(data, responseType);
+        return objectMapper.convertValue(data, responseType);
     }
 
     private HttpRequest createRequest(URI endpoint, String query) throws JsonProcessingException

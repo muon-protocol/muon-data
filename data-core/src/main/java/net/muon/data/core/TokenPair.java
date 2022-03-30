@@ -1,5 +1,7 @@
 package net.muon.data.core;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -50,6 +52,7 @@ public final class TokenPair
         return Objects.hash(token0, token1);
     }
 
+    @JsonValue
     @Override
     public String toString()
     {
