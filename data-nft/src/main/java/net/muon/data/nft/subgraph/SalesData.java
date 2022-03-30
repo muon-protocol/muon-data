@@ -4,33 +4,18 @@ import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.List;
 
-class SaleQueryResponse
+class SalesData
 {
-    private SalesData data;
+    private List<SaleData> sales;
 
-    public SalesData getData()
+    public List<SaleData> getSales()
     {
-        return data;
+        return sales;
     }
 
-    public void setData(SalesData data)
+    public void setSales(List<SaleData> sales)
     {
-        this.data = data;
-    }
-
-    public static class SalesData
-    {
-        private List<SaleData> sales;
-
-        public List<SaleData> getSales()
-        {
-            return sales;
-        }
-
-        public void setSales(List<SaleData> sales)
-        {
-            this.sales = sales;
-        }
+        this.sales = sales;
     }
 
     public static class SaleData
