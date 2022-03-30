@@ -1,4 +1,4 @@
-package net.muon.data.core.incubator;
+package net.muon.data.core;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;

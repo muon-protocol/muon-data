@@ -1,23 +1,19 @@
 package net.muon.data.binance;
 
 import info.bitrich.xchangestream.binance.BinanceStreamingExchange;
-import net.muon.data.core.CryptoQuote;
-import net.muon.data.core.CryptoSource;
-import net.muon.data.core.QuoteChangeListener;
-import net.muon.data.core.incubator.TokenPair;
-import net.muon.data.core.incubator.TokenPairPrice;
-import net.muon.data.core.incubator.TokenPriceSource;
+import net.muon.data.core.AbstractXchangeSource;
+import net.muon.data.core.TokenPair;
 import org.apache.ignite.Ignite;
 
 import java.util.List;
 import java.util.concurrent.Executor;
 
-public class BinanceWsSource extends CryptoSource implements TokenPriceSource
+public class BinanceWsSource extends AbstractXchangeSource
 {
-    public BinanceWsSource(Ignite ignite, List<String> exchanges, List<String> symbols, Executor executor,
-                           String secret, String apiKey, List<QuoteChangeListener> changeListeners)
+    public BinanceWsSource(Ignite ignite, List<TokenPair> subscriptionPairs, Executor executor,
+                           String secret, String apiKey)
     {
-        super("binance", exchanges, ignite, symbols, changeListeners, apiKey, secret, null);
+        super("binance", ignite, subscriptionPairs, apiKey, secret);
         executor.execute(() -> {
             try {
                 connect();
@@ -38,12 +34,5 @@ public class BinanceWsSource extends CryptoSource implements TokenPriceSource
     {
         ((BinanceStreamingExchange) exchange).enableLiveSubscription();
         super.subscribe();
-    }
-
-    @Override
-    public TokenPairPrice getTokenPairPrice(TokenPair pair)
-    {
-        CryptoQuote quote = getQuote(pair.toString());
-        return new TokenPairPrice(pair, quote.getPrice(), quote.getInstantTime());
     }
 }

@@ -6,45 +6,50 @@ import info.bitrich.xchangestream.service.netty.ConnectionStateModel;
 import io.reactivex.Completable;
 import io.reactivex.disposables.Disposable;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.exceptions.ExchangeException;
-import org.knowm.xchange.utils.ObjectMapperHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import javax.cache.configuration.Factory;
-import javax.cache.expiry.ExpiryPolicy;
 import java.util.List;
-import java.util.Map;
 
-@Deprecated
-public abstract class CryptoSource extends Source<CryptoQuote>
+public abstract class AbstractXchangeSource implements TokenPriceSource
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractXchangeSource.class);
+
+    protected final IgniteCache<TokenPair, TokenPairPrice> cache;
+    protected final String id;
+    protected final List<TokenPair> subscriptionPairs;
     protected final String apiKey;
     protected final String secret;
+
     protected StreamingExchange exchange;
     protected ProductSubscription subscription;
     protected Disposable subscriptionDisposable;
 
-    public CryptoSource(String id, List<String> exchanges, Ignite ignite, List<String> symbols,
-                        List<QuoteChangeListener> changeListeners, String apiKey, String secret, Factory<ExpiryPolicy> cacheExpiryPolicy)
+    public AbstractXchangeSource(String id, Ignite ignite, List<TokenPair> subscriptionPairs, String apiKey, String secret)
     {
-        super(id, exchanges, ignite, symbols, changeListeners, cacheExpiryPolicy);
+        var config = new CacheConfiguration<TokenPair, TokenPairPrice>(id + "_cache");
+        config.setCacheMode(CacheMode.REPLICATED);
+        this.cache = ignite.getOrCreateCache(config);
+
+        this.id = id;
+        this.subscriptionPairs = subscriptionPairs;
         this.apiKey = apiKey;
         this.secret = secret;
     }
 
     @Override
-    public CryptoQuote getQuote(String symbol)
+    public TokenPairPrice getTokenPairPrice(TokenPair pair)
     {
-        Quote q = super.getQuote(symbol);
-        return q == null ? null : new CryptoQuote(q);
+        return cache.get(pair);
     }
 
-    @Override
-    public CryptoQuote load(String symbol)
-    {
-        return super.load(symbol);
-    }
+    public abstract void connect();
 
     protected void connect(Class<? extends StreamingExchange> clazz)
     {
@@ -79,7 +84,7 @@ public abstract class CryptoSource extends Source<CryptoQuote>
     protected ProductSubscription createSubscription()
     {
         ProductSubscription.ProductSubscriptionBuilder builder = ProductSubscription.create();
-        if (symbols.isEmpty()) {
+        if (subscriptionPairs.isEmpty()) {
             try {
                 exchange.getExchangeSymbols().forEach(builder::addTrades);
             } catch (Exception e) {
@@ -87,11 +92,11 @@ public abstract class CryptoSource extends Source<CryptoQuote>
             }
         } else {
             try {
-                symbols.forEach(currencyPair -> {
+                subscriptionPairs.forEach(pair -> {
                     try {
-                        builder.addTrades(new CurrencyPair(currencyPair));
+                        builder.addTrades(new CurrencyPair(pair.toString()));
                     } catch (IllegalArgumentException e) {
-                        LOGGER.warn("Failed to convert symbol {} into currency. Reason: {}", currencyPair, e.getMessage());
+                        LOGGER.warn("Failed to convert symbol {} into currency. Reason: {}", pair, e.getMessage());
                     } catch (Exception e) {
                         LOGGER.warn("Exception suppressed.", e);
                     }
@@ -103,20 +108,6 @@ public abstract class CryptoSource extends Source<CryptoQuote>
         return builder.build();
     }
 
-    @Override
-    public Map<String, String> getInfo()
-    {
-        Map<String, String> info = super.getInfo();
-        info.put("name", this.exchange.getDefaultExchangeSpecification().getExchangeName());
-        info.put("description", this.exchange.getDefaultExchangeSpecification().getExchangeDescription());
-        info.put("uri", this.exchange.getDefaultExchangeSpecification().getPlainTextUri());
-        info.put("ssl-uri", this.exchange.getDefaultExchangeSpecification().getSslUri());
-        String meta = ObjectMapperHelper.toCompactJSON(this.exchange.getExchangeMetaData());
-        info.put("meta-data", meta);
-        return info;
-    }
-
-    @Override
     public void disconnect()
     {
         try {
@@ -148,8 +139,9 @@ public abstract class CryptoSource extends Source<CryptoQuote>
                         .getTrades(currencyPair)
                         .subscribe(trade -> {
                             LOGGER.debug("Trade received: {}", trade);
-                            CryptoQuote cryptoQuote = new CryptoQuote(trade);
-                            addQuote(cryptoQuote);
+                            TokenPair pair = new TokenPair(trade.getCurrencyPair().base.toString(), trade.getCurrencyPair().counter.toString());
+                            TokenPairPrice price = new TokenPairPrice(pair, trade.getPrice(), trade.getTimestamp().toInstant());
+                            cache.put(pair, price);
                         }, throwable -> LOGGER.error("Error in trade {} subscription: {}", currencyPair, throwable.getMessage()));
             } catch (ExchangeException e) {
                 LOGGER.warn("ExchangeException suppressed", e);

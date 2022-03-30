@@ -1,6 +1,4 @@
-package net.muon.data.core.incubator;
-
-import net.muon.data.core.SubgraphClient;
+package net.muon.data.core;
 
 import java.math.BigDecimal;
 import java.math.MathContext;

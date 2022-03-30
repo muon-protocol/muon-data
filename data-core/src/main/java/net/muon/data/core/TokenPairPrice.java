@@ -1,4 +1,4 @@
-package net.muon.data.core.incubator;
+package net.muon.data.core;
 
 import java.math.BigDecimal;
 import java.time.Instant;

@@ -3,9 +3,8 @@ package net.muon.data.app.crypto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.muon.data.binance.BinanceHttpSource;
 import net.muon.data.binance.BinanceWsSource;
-import net.muon.data.core.QuoteChangeListener;
 import net.muon.data.core.SubgraphClient;
-import net.muon.data.core.incubator.TokenPair;
+import net.muon.data.core.TokenPair;
 import net.muon.data.gateio.GateioHttpSource;
 import net.muon.data.gateio.GateioWsSource;
 import net.muon.data.gemini.GeminiWsSource;
@@ -18,10 +17,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.net.http.HttpClient;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.Executor;
 
 @Configuration
@@ -38,14 +35,11 @@ public class CryptoConfiguration
     @Bean
     @ConditionalOnProperty(prefix = "binance", name = "disabled", havingValue = "false", matchIfMissing = true)
     public BinanceWsSource binanceWsSource(Ignite ignite, Executor executor,
-                                           @Value("${exchanges:}") Optional<List<String>> exchanges,
-                                           @Value("${binance.symbols:}") Optional<List<String>> symbols,
+                                           @Value("${binance.symbols:}") List<TokenPair> subscriptionPairs,
                                            @Value("${binance.secret}") String secret,
-                                           @Value("${binance.api-key}") String apiKey,
-                                           List<QuoteChangeListener> changeListeners)
+                                           @Value("${binance.api-key}") String apiKey)
     {
-        return new BinanceWsSource(ignite, exchanges.orElse(Collections.emptyList()),
-                symbols.orElse(Collections.emptyList()), executor, secret, apiKey, changeListeners);
+        return new BinanceWsSource(ignite, subscriptionPairs, executor, secret, apiKey);
     }
 
     @Bean
@@ -73,14 +67,11 @@ public class CryptoConfiguration
     @Bean
     @ConditionalOnProperty(prefix = "kraken", name = "disabled", havingValue = "false", matchIfMissing = true)
     public KrakenWsSource krakenSource(Ignite ignite, Executor executor,
-                                       @Value("${exchanges:}") Optional<List<String>> exchanges,
-                                       @Value("${kraken.symbols:}") Optional<List<String>> symbols,
+                                       @Value("${kraken.symbols:}") List<TokenPair> subscriptionPairs,
                                        @Value("${kraken.secret}") String secret,
-                                       @Value("${kraken.api-key}") String apiKey,
-                                       List<QuoteChangeListener> changeListeners)
+                                       @Value("${kraken.api-key}") String apiKey)
     {
-        return new KrakenWsSource(ignite, exchanges.orElse(Collections.emptyList()),
-                symbols.orElse(Collections.emptyList()), executor, secret, apiKey, changeListeners);
+        return new KrakenWsSource(ignite, subscriptionPairs, executor, secret, apiKey);
     }
 
     @Bean

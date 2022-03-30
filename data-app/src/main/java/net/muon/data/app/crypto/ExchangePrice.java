@@ -1,7 +1,7 @@
 package net.muon.data.app.crypto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import net.muon.data.core.incubator.TokenPairPrice;
+import net.muon.data.core.TokenPairPrice;
 
 import java.math.BigDecimal;
 import java.time.Instant;

@@ -1,4 +1,4 @@
-package net.muon.data.core.incubator;
+package net.muon.data.core;
 
 public interface TokenPriceSource
 {

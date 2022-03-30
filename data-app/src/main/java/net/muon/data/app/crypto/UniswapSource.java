@@ -1,7 +1,7 @@
 package net.muon.data.app.crypto;
 
 import net.muon.data.core.SubgraphClient;
-import net.muon.data.core.incubator.DexSource;
+import net.muon.data.core.DexSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

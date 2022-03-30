@@ -1,7 +1,7 @@
 package net.muon.data.app.crypto;
 
 import io.swagger.v3.oas.annotations.Parameter;
-import net.muon.data.core.incubator.TokenPair;
+import net.muon.data.core.TokenPair;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

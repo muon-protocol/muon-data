@@ -1,6 +1,6 @@
 package net.muon.data.app.crypto;
 
-import net.muon.data.core.incubator.TokenPair;
+import net.muon.data.core.TokenPair;
 
 import java.math.BigDecimal;
 import java.util.List;

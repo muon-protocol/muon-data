@@ -2,9 +2,9 @@ package net.muon.data.gateio;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.muon.data.core.incubator.AbstractHttpSource;
-import net.muon.data.core.incubator.TokenPair;
-import net.muon.data.core.incubator.TokenPairPrice;
+import net.muon.data.core.AbstractHttpSource;
+import net.muon.data.core.TokenPair;
+import net.muon.data.core.TokenPairPrice;
 
 import java.io.IOException;
 import java.math.BigDecimal;
