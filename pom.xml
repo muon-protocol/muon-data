@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.6.4</version>
+        <version>2.6.5</version>
     </parent>
 
     <groupId>net.muon.data</groupId>
@@ -29,9 +29,12 @@
         <module>data-gateio</module>
         <module>data-gemini</module>
         <module>data-kraken</module>
-
-        <module>data-uniswap</module>
-        <module>data-sushiswap</module>
+        <module>data-bitfinex</module>
+        <module>data-bitflyer</module>
+        <module>data-bitstamp</module>
+        <module>data-ftx</module>
+        <module>data-hitbtc</module>
+        <module>data-huobi</module>
 
         <module>data-app</module>
     </modules>

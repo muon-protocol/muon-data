@@ -48,16 +48,41 @@
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-kraken</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-bitfinex</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-gemini</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>net.muon.data</groupId>
-            <artifactId>data-uniswap</artifactId>
+            <artifactId>data-bitflyer</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-ftx</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-hitbtc</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-huobi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-bitstamp</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -82,11 +107,6 @@
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
             <version>4.9.1</version>
-        </dependency>
-        <dependency>
-            <groupId>net.muon.data</groupId>
-            <artifactId>data-sushiswap</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
     </dependencies>
