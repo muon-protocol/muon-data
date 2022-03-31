@@ -1,35 +1,36 @@
 package net.muon.data.app.crypto.configuration;
 
-import net.muon.data.binance.BinanceHttpSource;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties("crypto.http")
+@Validated
 public class CryptoHttpProperties
 {
-    private BinanceHttpSource binance;
-    private GateioHttpSource gateio;
+    private BinanceHttpProperties binance;
+    private GateioHttpProperties gateio;
 
-    public BinanceHttpSource getBinance()
+    public BinanceHttpProperties getBinance()
     {
         return binance;
     }
 
-    public void setBinance(BinanceHttpSource binance)
+    public void setBinance(BinanceHttpProperties binance)
     {
         this.binance = binance;
     }
 
-    public GateioHttpSource getGateio()
+    public GateioHttpProperties getGateio()
     {
         return gateio;
     }
 
-    public void setGateio(GateioHttpSource gateio)
+    public void setGateio(GateioHttpProperties gateio)
     {
         this.gateio = gateio;
     }
 
     public static class BinanceHttpProperties extends AbstractHttpProperties {}
 
-    public static class GateioHttpSource extends AbstractHttpProperties {}
+    public static class GateioHttpProperties extends AbstractHttpProperties {}
 }

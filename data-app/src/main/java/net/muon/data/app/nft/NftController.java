@@ -3,7 +3,9 @@ package net.muon.data.app.nft;
 import net.muon.data.nft.NftFloorPrice;
 import net.muon.data.nft.NftPrice;
 import net.muon.data.nft.OpenseaSource;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;
@@ -40,7 +42,7 @@ public class NftController
     private OpenseaSource getOpenseaSource()
     {
         if (openseaSource == null)
-            throw new RuntimeException();
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE);
         return openseaSource;
     }
 }

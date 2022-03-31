@@ -1,8 +1,10 @@
 package net.muon.data.app.crypto.configuration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties("crypto.ws")
+@Validated
 public class CryptoWsProperties
 {
     private Integer skipPricesAfterMillis;
