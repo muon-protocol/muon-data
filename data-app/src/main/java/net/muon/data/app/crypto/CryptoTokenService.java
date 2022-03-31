@@ -62,7 +62,7 @@ public class CryptoTokenService
     {
         List<ExchangePrice> prices = new ArrayList<>();
 
-        if (exchanges.length == 0) {
+        if (exchanges == null || exchanges.length == 0) {
             // If no exchanges are provided, first try getting prices from web socket sources.
             // If no prices were found, Try a random (first) http source.
             websocketSources.forEach((exchange, source) -> addPrice(prices, exchange, source.getTokenPairPrice(pair)));
@@ -101,15 +101,12 @@ public class CryptoTokenService
         if (prices.isEmpty())
             return response;
 
-        ExchangePrice p0 = prices.get(0);
-        BigDecimal sum = p0.getPrice();
+        BigDecimal sum = BigDecimal.ZERO;
         Instant now = Instant.now();
 
-        for (int i = 1; i < prices.size(); i++) {
-            ExchangePrice p = prices.get(i);
-            if (ignorePriceIfOlderThanMillis == null || (now.toEpochMilli() - p.getTime()) < ignorePriceIfOlderThanMillis)
-                sum = sum.add(p.getPrice());
-        }
+        for (ExchangePrice price : prices)
+            if (ignorePriceIfOlderThanMillis == null || (now.toEpochMilli() - price.getTime()) < ignorePriceIfOlderThanMillis)
+                sum = sum.add(price.getPrice());
 
         response.setAveragePrice(sum.divide(BigDecimal.valueOf(prices.size()), PRECISION));
         return response;

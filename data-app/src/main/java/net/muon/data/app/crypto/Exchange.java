@@ -7,6 +7,12 @@ public enum Exchange
     GATEIO("gateio"),
     GEMINI("gemini"),
     KRAKEN("kraken"),
+    BITFINEX("bitfinex"),
+    BITFLYER("bitflyer"),
+    BITSTAMP("bitstamp"),
+    FTX("ftx"),
+    HITBTC("hitbtc"),
+    HUOBI("huobi"),
 
     UNISWAP_V2("uniswap_v2"),
     SUSHISWAP("sushiswap");

@@ -48,12 +48,42 @@
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-kraken</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-bitfinex</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>net.muon.data</groupId>
             <artifactId>data-gemini</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-bitflyer</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-ftx</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-hitbtc</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-huobi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-bitstamp</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>

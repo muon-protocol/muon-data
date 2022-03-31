@@ -37,6 +37,36 @@ crypto:
       pairs:
         - ETH-USDT
 
+    bitfinex:
+      enabled: true
+      pairs:
+        - ETH-USDT
+
+    bitflyer:
+      enabled: true
+      pairs:
+        - ETH-USDT
+
+    bitstamp:
+      enabled: true
+      pairs:
+        - ETH-USDT
+
+    ftx:
+      enabled: true
+      pairs:
+        - ETH-USDT
+
+    hitbtc:
+      enabled: true
+      pairs:
+        - ETH-USDT
+
+    huobi:
+      enabled: true
+      pairs:
+        - ETH-USDT
+
   http:
     binance:
       enabled: true

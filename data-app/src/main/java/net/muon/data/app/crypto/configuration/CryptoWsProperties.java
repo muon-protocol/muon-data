@@ -13,6 +13,12 @@ public class CryptoWsProperties
     private GateioWsProperties gateio;
     private GeminiWsProperties gemini;
     private KrakenWsProperties kraken;
+    private BitfinexWsProperties bitfinex;
+    private BitflyerWsProperties bitflyer;
+    private BitstampWsProperties bitstamp;
+    private FtxWsProperties ftx;
+    private HitbtcWsProperties hitbtc;
+    private HuobiWsProperties huobi;
 
     public Integer getSkipPricesAfterMillis()
     {
@@ -74,31 +80,67 @@ public class CryptoWsProperties
         this.kraken = kraken;
     }
 
-    public static class BinanceWsProperties extends AbstractWsProperties
+    public BitfinexWsProperties getBitfinex()
     {
-        private String apiKey;
-        private String secret;
-
-        public String getApiKey()
-        {
-            return apiKey;
-        }
-
-        public void setApiKey(String apiKey)
-        {
-            this.apiKey = apiKey;
-        }
-
-        public String getSecret()
-        {
-            return secret;
-        }
-
-        public void setSecret(String secret)
-        {
-            this.secret = secret;
-        }
+        return bitfinex;
     }
+
+    public void setBitfinex(BitfinexWsProperties bitfinex)
+    {
+        this.bitfinex = bitfinex;
+    }
+
+    public BitflyerWsProperties getBitflyer()
+    {
+        return bitflyer;
+    }
+
+    public void setBitflyer(BitflyerWsProperties bitflyer)
+    {
+        this.bitflyer = bitflyer;
+    }
+
+    public BitstampWsProperties getBitstamp()
+    {
+        return bitstamp;
+    }
+
+    public void setBitstamp(BitstampWsProperties bitstamp)
+    {
+        this.bitstamp = bitstamp;
+    }
+
+    public FtxWsProperties getFtx()
+    {
+        return ftx;
+    }
+
+    public void setFtx(FtxWsProperties ftx)
+    {
+        this.ftx = ftx;
+    }
+
+    public HitbtcWsProperties getHitbtc()
+    {
+        return hitbtc;
+    }
+
+    public void setHitbtc(HitbtcWsProperties hitbtc)
+    {
+        this.hitbtc = hitbtc;
+    }
+
+    public HuobiWsProperties getHuobi()
+    {
+        return huobi;
+    }
+
+    public void setHuobi(HuobiWsProperties huobi)
+    {
+        this.huobi = huobi;
+    }
+
+    public static class BinanceWsProperties extends AbstractXchangeWsProperties {}
 
     public static class KucoinWsProperties extends AbstractWsProperties {}
 
@@ -106,7 +148,21 @@ public class CryptoWsProperties
 
     public static class GeminiWsProperties extends AbstractWsProperties {}
 
-    public static class KrakenWsProperties extends AbstractWsProperties
+    public static class KrakenWsProperties extends AbstractXchangeWsProperties {}
+
+    public static class BitfinexWsProperties extends AbstractXchangeWsProperties {}
+
+    public static class BitflyerWsProperties extends AbstractXchangeWsProperties {}
+
+    public static class BitstampWsProperties extends AbstractXchangeWsProperties {}
+
+    public static class FtxWsProperties extends AbstractXchangeWsProperties {}
+
+    public static class HitbtcWsProperties extends AbstractXchangeWsProperties {}
+
+    public static class HuobiWsProperties extends AbstractXchangeWsProperties {}
+
+    public static abstract class AbstractXchangeWsProperties extends AbstractWsProperties
     {
         private String apiKey;
         private String secret;
