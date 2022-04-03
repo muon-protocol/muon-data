@@ -85,6 +85,11 @@
             <artifactId>data-bitstamp</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>net.muon.data</groupId>
+            <artifactId>data-coinbase</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>net.muon.data</groupId>

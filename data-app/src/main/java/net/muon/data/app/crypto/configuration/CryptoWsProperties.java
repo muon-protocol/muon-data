@@ -19,6 +19,7 @@ public class CryptoWsProperties
     private FtxWsProperties ftx;
     private HitbtcWsProperties hitbtc;
     private HuobiWsProperties huobi;
+    private CoinbaseWsProperties coinbase;
 
     public Integer getSkipPricesAfterMillis()
     {
@@ -140,6 +141,15 @@ public class CryptoWsProperties
         this.huobi = huobi;
     }
 
+    public CoinbaseWsProperties getCoinbase() {
+        return coinbase;
+    }
+
+    public void setCoinbase(CoinbaseWsProperties coinbase) {
+        this.coinbase = coinbase;
+    }
+
+
     public static class BinanceWsProperties extends AbstractXchangeWsProperties {}
 
     public static class KucoinWsProperties extends AbstractWsProperties {}
@@ -161,6 +171,8 @@ public class CryptoWsProperties
     public static class HitbtcWsProperties extends AbstractXchangeWsProperties {}
 
     public static class HuobiWsProperties extends AbstractXchangeWsProperties {}
+
+    public static class CoinbaseWsProperties extends AbstractXchangeWsProperties {}
 
     public static abstract class AbstractXchangeWsProperties extends AbstractWsProperties
     {

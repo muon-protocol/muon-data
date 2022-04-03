@@ -6,6 +6,7 @@ import net.muon.data.binance.BinanceWsSource;
 import net.muon.data.bitfinex.BitfinexWsSource;
 import net.muon.data.bitflyer.BitflyerWsSource;
 import net.muon.data.bitstamp.BitstampWsSource;
+import net.muon.data.coinbase.CoinbaseWsSource;
 import net.muon.data.ftx.FtxWsSource;
 import net.muon.data.gateio.GateioWsSource;
 import net.muon.data.gemini.GeminiWsSource;
@@ -124,6 +125,16 @@ public class CryptoWsConfiguration
         var huobiWsProperties = properties.getHuobi();
         return new HuobiWsSource(Exchange.HUOBI.getId(), huobiWsProperties.getTokenPairs(),
                 huobiWsProperties.getSecret(), huobiWsProperties.getApiKey(),
+                configBeans.executor, configBeans.ignite);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "crypto.ws.coinbase.enabled", havingValue = "true")
+    public CoinbaseWsSource coinbaseWsSource(WsConfigBeans configBeans, CryptoWsProperties properties)
+    {
+        var coinbaseWsProperties = properties.getCoinbase();
+        return new CoinbaseWsSource(Exchange.COINBASE.getId(), coinbaseWsProperties.getTokenPairs(),
+                coinbaseWsProperties.getSecret(), coinbaseWsProperties.getApiKey(),
                 configBeans.executor, configBeans.ignite);
     }
 
