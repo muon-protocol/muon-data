@@ -13,6 +13,7 @@ public enum Exchange
     FTX("ftx"),
     HITBTC("hitbtc"),
     HUOBI("huobi"),
+    COINBASE("coinbase"),
 
     UNISWAP_V2("uniswap_v2"),
     SUSHISWAP("sushiswap");

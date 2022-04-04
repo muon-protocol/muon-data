@@ -35,6 +35,7 @@
         <module>data-ftx</module>
         <module>data-hitbtc</module>
         <module>data-huobi</module>
+        <module>data-coinbase</module>
 
         <module>data-app</module>
     </modules>
