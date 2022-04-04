@@ -7,6 +7,7 @@ public class NftPrice
 {
     private final BigDecimal latestPrice;
     private final Long latestPriceTime;
+//    private final String latestPriceToken;
     private final BigDecimal averagePrice;
     private final Integer count;
 

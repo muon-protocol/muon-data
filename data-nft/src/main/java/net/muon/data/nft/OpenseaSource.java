@@ -1,5 +1,6 @@
 package net.muon.data.nft;
 
+import com.google.common.base.Strings;
 import net.muon.data.core.SubgraphClient;
 
 import java.math.BigDecimal;
@@ -7,13 +8,15 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.net.URI;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static net.muon.data.core.Constants.ETH_IN_WEI;
+import static net.muon.data.core.Constants.PRECISION;
 
 public class OpenseaSource
 {
-    private static final BigDecimal ETH_IN_WEI = BigDecimal.valueOf(1000000000000000000L);
-    private static final MathContext PRECISION = new MathContext(5);
     private static final int PAGE_SIZE = 1000;
 
     private final URI endpoint;
@@ -27,17 +30,19 @@ public class OpenseaSource
 
     public NftPrice getPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
     {
-        toTimestamp = checkTimePeriod(fromTimestamp, toTimestamp);
+        long now = Instant.now().toEpochMilli() / 1000;
+        if (toTimestamp == null || toTimestamp > now)
+            toTimestamp = now;
 
         SaleData latestPrice = null;
         BigInteger sum = BigInteger.ZERO;
         int count = 0;
         List<SaleData> sales;
         do {
-            var tokenData = fetchTokenPriceData(collectionId, nftId, fromTimestamp, toTimestamp, count);
-            if (tokenData == null || tokenData.getToken() == null)
+            var salesData = fetchTokenPrice(collectionId, nftId, fromTimestamp, toTimestamp, count);
+            if (salesData == null || salesData.getSales() == null)
                 return null;
-            sales = tokenData.getToken().getSales();
+            sales = salesData.getSales();
             sum = sales.stream().map(SaleData::getPrice).reduce(sum, BigInteger::add);
             if (count == 0 && !sales.isEmpty())
                 latestPrice = sales.get(0);
@@ -52,10 +57,9 @@ public class OpenseaSource
         return new NftPrice(lastPrice, latestPrice.getTimestamp(), avg, count);
     }
 
-    public NftFloorPrice getFloorPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
+    public NftFloorPrice getFloorPrice(String collectionId, BigInteger tokenId, Long fromTimestamp, Long toTimestamp)
     {
-        toTimestamp = checkTimePeriod(fromTimestamp, toTimestamp);
-        var priceData = fetchFloorPrice(collectionId, nftId, fromTimestamp, toTimestamp);
+        var priceData = fetchFloorPrice(collectionId, tokenId, fromTimestamp, toTimestamp);
 
         if (priceData == null)
             return null;
@@ -68,48 +72,66 @@ public class OpenseaSource
         return new NftFloorPrice(price, sale.getTimestamp());
     }
 
-    private TokenData fetchTokenPriceData(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp, long skip)
+    private SalesData fetchTokenPrice(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp, int skip)
     {
-        var fromTimeFilter = fromTimestamp != null ? String.format("timestamp_gte: %d, ", fromTimestamp) : "";
-        var timeFilter = fromTimeFilter + String.format("timestamp_lte: %d", toTimestamp);
-
-        String query = String.format("{\n" +
-                "   token(id: \"%s:%s\") {\n" +
-                "       sales (skip: %d, first: %d , orderBy: timestamp, orderDirection: desc, where: {%s}) {" +
-                "           price\n" +
-                "           timestamp\n" +
-                "       }\n" +
-                "   }\n" +
-                "}", collection, tokenId, skip, PAGE_SIZE, timeFilter);
-
-        return subgraphClient.send(endpoint, query, TokenData.class);
+        checkNotNull(collection);
+        checkNotNull(tokenId);
+        return fetchSales(collection, tokenId, fromTimestamp, toTimestamp, "timestamp", true, PAGE_SIZE, skip);
     }
 
     private SalesData fetchFloorPrice(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp)
     {
-        var fromTimeFilter = fromTimestamp != null ? String.format("timestamp_gte: %d, ", fromTimestamp) : "";
-        var timeFilter = fromTimeFilter + String.format("timestamp_lte: %d", toTimestamp);
+        return fetchSales(collection, tokenId, fromTimestamp, toTimestamp, "price", false, 1, 0);
+    }
 
-        var tokenFilter = tokenId == null ?
-                String.format("token_starts_with: \"%s:\"", collection.toLowerCase()) :
-                String.format("token: \"%s:%s\"", collection.toLowerCase(), tokenId);
+    private SalesData fetchSales(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp,
+                                 String order, Boolean desc, Integer limit, Integer offset)
+    {
+        List<String> filters = new ArrayList<>();
+        if (!Strings.isNullOrEmpty(collection))
+            filters.add(String.format("collection: \"%s\"", collection.toLowerCase()));
+        if (tokenId != null)
+            filters.add(String.format("tokenId: \"%s\"", tokenId));
+        filters.addAll(getTimestampFilters(fromTimestamp, toTimestamp));
+
+        List<String> criteria = new ArrayList<>();
+        if (offset != null)
+            criteria.add("skip: " + offset);
+        if (limit != null)
+            criteria.add("first: " + limit);
+        if (order != null)
+            criteria.add("orderBy: " + order);
+        if (desc != null)
+            criteria.add("orderDirection: " + (desc ? "desc" : "asc"));
+        if (!filters.isEmpty())
+            criteria.add(String.format("where: {%s}", String.join(", ", filters)));
 
         String query = String.format("{\n" +
-                "   sales(first: 1, orderBy: price, orderDirection: asc, where : {%s, %s}){\n" +
-                "       price\n" +
+                "   sales (%s) {\n" +
+                "       tokenId\n" +
                 "       timestamp\n" +
+                "       price\n" +
+                "       paymentToken {\n" +
+                "           name\n" +
+                "       }\n" +
+                "       usdtPrice\n" +
                 "   }\n" +
-                "}", tokenFilter, timeFilter);
+                "}", String.join(", ", criteria));
 
         return subgraphClient.send(endpoint, query, SalesData.class);
     }
 
-    private Long checkTimePeriod(Long fromTimestamp, Long toTimestamp)
+    private static List<String> getTimestampFilters(Long fromTimestamp, Long toTimestamp)
     {
-        if (fromTimestamp != null && toTimestamp != null && fromTimestamp > toTimestamp)
+        if (fromTimestamp != null && toTimestamp != null && fromTimestamp >= toTimestamp)
             throw new IllegalArgumentException("Invalid time period");
-        long now = Instant.now().toEpochMilli() / 1000;
-        return toTimestamp == null || toTimestamp > now ? now : toTimestamp;
+
+        List<String> filters = new ArrayList<>();
+        if (fromTimestamp != null)
+            filters.add("timestamp_gte: " + fromTimestamp);
+        if (toTimestamp != null)
+            filters.add("timestamp_lt: " + toTimestamp);
+        return filters;
     }
 
     private static class SalesData
@@ -125,52 +147,5 @@ public class OpenseaSource
         {
             this.sales = sales;
         }
-    }
-
-    private static class SaleData
-    {
-        private BigInteger price;
-        private Long timestamp;
-
-        public Long getTimestamp()
-        {
-            return timestamp;
-        }
-
-        public void setTimestamp(Long timestamp)
-        {
-            this.timestamp = timestamp;
-        }
-
-        public BigInteger getPrice()
-        {
-            return price;
-        }
-
-        public void setPrice(BigInteger price)
-        {
-            this.price = price;
-        }
-    }
-
-    private static class TokenData
-    {
-        private SalesData token;
-
-        public SalesData getToken()
-        {
-            return token;
-        }
-
-        public void setToken(SalesData token)
-        {
-            this.token = token;
-        }
-    }
-
-    public static void main(String[] args)
-    {
-        System.out.println(Instant.now().minus(7, ChronoUnit.DAYS).toEpochMilli());
-        ;
     }
 }
