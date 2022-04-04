@@ -6,8 +6,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-import static net.muon.data.core.Constants.PRECISION;
-
 public class DexSource extends AbstractHttpSource
 {
     private final URI endpoint;
@@ -60,9 +58,9 @@ public class DexSource extends AbstractHttpSource
 
         PairData pair = pairs.get(0);
         if (token0PriceRequested)
-            return pair.getReserve1().divide(pair.getReserve0(), PRECISION);
+            return BigDecimals.divide(pair.getReserve1(), pair.getReserve0());
 
-        return pair.getReserve0().divide(pair.getReserve1(), PRECISION);
+        return BigDecimals.divide(pair.getReserve0(), pair.getReserve1());
     }
 
     private static class Result

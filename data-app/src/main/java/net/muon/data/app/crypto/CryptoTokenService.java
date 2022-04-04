@@ -13,8 +13,6 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
-import static net.muon.data.core.Constants.PRECISION;
-
 @Service
 public class CryptoTokenService
 {
@@ -107,7 +105,7 @@ public class CryptoTokenService
             if (ignorePriceIfOlderThanMillis == null || (now.toEpochMilli() - price.getTime()) < ignorePriceIfOlderThanMillis)
                 sum = sum.add(price.getPrice());
 
-        response.setAveragePrice(sum.divide(BigDecimal.valueOf(prices.size()), PRECISION));
+        response.setAveragePrice(BigDecimals.divide(sum, prices.size()));
         return response;
     }
 

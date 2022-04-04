@@ -67,6 +67,11 @@ crypto:
       pairs:
         - ETH-USDT
 
+    coinbase:
+      enabled: true
+      pairs:
+        - ETH-USDT
+
   http:
     binance:
       enabled: true

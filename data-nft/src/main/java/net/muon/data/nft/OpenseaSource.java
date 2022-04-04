@@ -1,19 +1,18 @@
 package net.muon.data.nft;
 
 import com.google.common.base.Strings;
+import net.muon.data.core.BigDecimals;
 import net.muon.data.core.SubgraphClient;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.MathContext;
 import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.muon.data.core.Constants.ETH_IN_WEI;
-import static net.muon.data.core.Constants.PRECISION;
+import static net.muon.data.core.BigDecimals.ETH_IN_WEI;
 
 public class OpenseaSource
 {
@@ -52,8 +51,8 @@ public class OpenseaSource
         if (count == 0)
             return null;
 
-        var avg = new BigDecimal(sum).divide(BigDecimal.valueOf(count), PRECISION).divide(ETH_IN_WEI, PRECISION);
-        BigDecimal lastPrice = new BigDecimal(latestPrice.getPrice()).divide(ETH_IN_WEI, PRECISION);
+        var avg = BigDecimals.divide(BigDecimals.divide(sum, count), ETH_IN_WEI);
+        BigDecimal lastPrice = BigDecimals.divide(latestPrice.getPrice(), ETH_IN_WEI);
         return new NftPrice(lastPrice, latestPrice.getTimestamp(), avg, count);
     }
 
@@ -68,7 +67,7 @@ public class OpenseaSource
             return null;
 
         SaleData sale = sales.get(0);
-        BigDecimal price = new BigDecimal(sale.getPrice()).divide(ETH_IN_WEI, PRECISION);
+        BigDecimal price = BigDecimals.divide(sale.getPrice(), ETH_IN_WEI);
         return new NftFloorPrice(price, sale.getTimestamp());
     }
 
