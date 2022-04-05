@@ -2,13 +2,24 @@ package net.muon.data.nft;
 
 import java.math.BigInteger;
 
-class SaleData
+class OpenseaSale
 {
+    private String collection;
     private String tokenId;
     private BigInteger price;
     private PaymentToken paymentToken;
     private BigInteger usdtPrice;
     private Long timestamp;
+
+    public String getCollection()
+    {
+        return collection;
+    }
+
+    public void setCollection(String collection)
+    {
+        this.collection = collection;
+    }
 
     public String getTokenId()
     {

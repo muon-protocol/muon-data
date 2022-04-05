@@ -1,23 +1,19 @@
 package net.muon.data.nft;
 
 import com.google.common.base.Strings;
+import net.muon.data.core.BigDecimals;
 import net.muon.data.core.SubgraphClient;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-
 public class OpenseaSource
 {
-    private static final String ETH_ID = "0x0000000000000000000000000000000000000000";
-    private static final String WETH_ID = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
-    private static final int PAGE_SIZE = 1000;
+    private static final int PAGE_SIZE = 500;
 
     private final URI endpoint;
     private final SubgraphClient subgraphClient;
@@ -28,80 +24,70 @@ public class OpenseaSource
         this.subgraphClient = subgraphClient;
     }
 
-    public NftPrice getPrice(String collectionId, BigInteger nftId, Long fromTimestamp, Long toTimestamp)
+    public List<NftSale> getSales(String collectionId, BigInteger tokenId,
+                                  Long fromTimestamp, Long toTimestamp,
+                                  BigDecimal fromPrice, BigDecimal toPrice,
+                                  String order, Boolean desc,
+                                  Integer limit, Integer offset)
     {
-        long now = Instant.now().toEpochMilli() / 1000;
-        if (toTimestamp == null || toTimestamp > now)
-            toTimestamp = now;
+        List<OpenseaSale> sales = fetchSales(collectionId, tokenId, fromTimestamp, toTimestamp, fromPrice, toPrice,
+                prepareOrder(order), desc, limit, offset);
+        return sales.stream().map(NftSale::new).collect(Collectors.toList());
+    }
 
-        SaleData latestPrice = null;
-        BigInteger sum = BigInteger.ZERO;
+    public NftSale getLastSale(String collectionId, BigInteger tokenId,
+                               Long fromTimestamp, Long toTimestamp,
+                               BigDecimal fromPrice, BigDecimal toPrice)
+    {
+        return getSales(collectionId, tokenId, fromTimestamp, toTimestamp, fromPrice, toPrice, "time", true, 1, 0)
+                .stream().findFirst().orElse(null);
+    }
+
+    public AveragePrice getAveragePrice(String collectionId, BigInteger tokenId,
+                                        Long fromTimestamp, Long toTimestamp,
+                                        BigDecimal fromPrice, BigDecimal toPrice)
+    {
+        if (fromTimestamp == null || toTimestamp == null)
+            throw new IllegalArgumentException("time period must be provided");
+
+        BigDecimal sum = BigDecimal.ZERO;
         int count = 0;
-        List<SaleData> sales;
+        List<NftSale> sales;
         do {
-            var salesData = fetchTokenPrice(collectionId, nftId, fromTimestamp, toTimestamp, count);
-            if (salesData == null || salesData.getSales() == null)
-                return null;
-            sales = salesData.getSales();
-            sum = sales.stream().map(SaleData::getPrice).reduce(sum, BigInteger::add);
-            if (count == 0 && !sales.isEmpty())
-                latestPrice = sales.get(0);
+            sales = getSales(collectionId, tokenId, fromTimestamp, toTimestamp, fromPrice, toPrice, null, null, PAGE_SIZE, count);
+            sum = sales.stream().map(NftSale::getPrice).reduce(sum, BigDecimal::add);
             count += sales.size();
-        } while (sales.size() == PAGE_SIZE);
+        } while (sales.size() == PAGE_SIZE && count < 5000);
 
         if (count == 0)
             return null;
 
-        return new NftPrice(latestPrice, count);
+        return new AveragePrice(BigDecimals.divide(sum, count), count);
     }
 
-    public NftFloorPrice getFloorPrice(String collectionId, BigInteger tokenId, Long fromTimestamp, Long toTimestamp)
+    public NftSale getFloorPrice(String collectionId, BigInteger tokenId, Long fromTimestamp, Long toTimestamp)
     {
-        var priceData = fetchFloorPrice(collectionId, tokenId, fromTimestamp, toTimestamp);
-
-        if (priceData == null)
-            return null;
-        var sales = priceData.getSales();
-        if (sales.isEmpty())
-            return null;
-
-        return new NftFloorPrice(sales.get(0));
+        return getSales(collectionId, tokenId, fromTimestamp, toTimestamp, null, null, "price", false, 1, 0)
+                .stream().findFirst().orElse(null);
     }
 
-    private SalesData fetchTokenPrice(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp, int skip)
-    {
-        checkArgument(!Strings.isNullOrEmpty(collection));
-        checkNotNull(tokenId);
-        return fetchSales(collection, tokenId, null, fromTimestamp, toTimestamp, "timestamp", true, PAGE_SIZE, skip);
-    }
-
-    private SalesData fetchFloorPrice(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp)
-    {
-        checkArgument(!Strings.isNullOrEmpty(collection));
-        return fetchSales(collection, tokenId, List.of(ETH_ID, WETH_ID), fromTimestamp, toTimestamp, "price", false, 1, 0);
-    }
-
-    private SalesData fetchSales(String collection, BigInteger tokenId,
-                                 List<String> paymentTokenIds,
-                                 Long fromTimestamp, Long toTimestamp,
-                                 String order, Boolean desc, Integer limit, Integer offset)
+    private List<OpenseaSale> fetchSales(String collection, BigInteger tokenId,
+                                         Long fromTimestamp, Long toTimestamp,
+                                         BigDecimal fromPrice, BigDecimal toPrice,
+                                         String order, Boolean desc, Integer limit, Integer offset)
     {
         List<String> filters = new ArrayList<>();
         if (!Strings.isNullOrEmpty(collection))
             filters.add(String.format("collection: \"%s\"", collection.toLowerCase()));
         if (tokenId != null)
             filters.add(String.format("tokenId: \"%s\"", tokenId));
-        if (paymentTokenIds != null && !paymentTokenIds.isEmpty()) {
-            String tokens = paymentTokenIds.stream().map(id -> String.format("\"%s\"", id)).collect(Collectors.joining(","));
-            filters.add(String.format("paymentToken_in: [%s]", tokens));
-        }
         filters.addAll(getTimestampFilters(fromTimestamp, toTimestamp));
+        filters.addAll(getPriceFilters(fromPrice, toPrice));
 
         List<String> criteria = new ArrayList<>();
         if (offset != null)
             criteria.add("skip: " + offset);
-        if (limit != null)
-            criteria.add("first: " + limit);
+        criteria.add("first: " + (limit == null ? PAGE_SIZE : limit));
         if (order != null)
             criteria.add("orderBy: " + order);
         if (desc != null)
@@ -111,6 +97,7 @@ public class OpenseaSource
 
         String query = String.format("{\n" +
                 "   sales (%s) {\n" +
+                "       collection\n" +
                 "       tokenId\n" +
                 "       timestamp\n" +
                 "       price\n" +
@@ -122,32 +109,59 @@ public class OpenseaSource
                 "   }\n" +
                 "}", String.join(", ", criteria));
 
-        return subgraphClient.send(endpoint, query, SalesData.class);
+        return subgraphClient.send(endpoint, query, SalesData.class).getSales();
     }
 
-    private static List<String> getTimestampFilters(Long fromTimestamp, Long toTimestamp)
+    private static List<String> getTimestampFilters(Long from, Long to)
     {
-        if (fromTimestamp != null && toTimestamp != null && fromTimestamp >= toTimestamp)
+        if (from != null && to != null && from >= to)
             throw new IllegalArgumentException("Invalid time period");
 
         List<String> filters = new ArrayList<>();
-        if (fromTimestamp != null)
-            filters.add("timestamp_gte: " + fromTimestamp);
-        if (toTimestamp != null)
-            filters.add("timestamp_lt: " + toTimestamp);
+        if (from != null)
+            filters.add("timestamp_gte: " + from);
+        if (to != null)
+            filters.add("timestamp_lt: " + to);
         return filters;
+    }
+
+    private static List<String> getPriceFilters(BigDecimal from, BigDecimal to)
+    {
+        if (from != null && to != null && from.compareTo(to) >= 0)
+            throw new IllegalArgumentException("Invalid price range");
+
+        List<String> filters = new ArrayList<>();
+        if (from != null)
+            filters.add("usdtPrice_gte: " + BigDecimals.multiplyByScale(from, 6).longValue());
+        if (to != null)
+            filters.add("usdtPrice_lt: " + BigDecimals.multiplyByScale(to, 6).longValue());
+        return filters;
+    }
+
+    private static String prepareOrder(String order)
+    {
+        if (order == null)
+            return null;
+        switch (order) {
+            case "time":
+                return "timestamp";
+            case "price":
+                return "usdtPrice";
+            default:
+                throw new IllegalArgumentException(order);
+        }
     }
 
     private static class SalesData
     {
-        private List<SaleData> sales;
+        private List<OpenseaSale> sales;
 
-        public List<SaleData> getSales()
+        public List<OpenseaSale> getSales()
         {
             return sales;
         }
 
-        public void setSales(List<SaleData> sales)
+        public void setSales(List<OpenseaSale> sales)
         {
             this.sales = sales;
         }
