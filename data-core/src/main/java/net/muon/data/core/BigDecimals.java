@@ -35,4 +35,9 @@ public final class BigDecimals
     {
         return divideByScale(dividend, decimalScale.intValue());
     }
+
+    public static BigDecimal multiplyByScale(BigDecimal dividend, int decimalScale)
+    {
+        return dividend.multiply(BigDecimal.TEN.pow(decimalScale));
+    }
 }
