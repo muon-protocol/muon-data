@@ -60,18 +60,29 @@ class SaleData
         this.timestamp = timestamp;
     }
 
-    private static class PaymentToken
+    public static class PaymentToken
     {
-        private String name;
+        private String symbol;
+        private BigInteger decimals;
 
-        public String getName()
+        public String getSymbol()
         {
-            return name;
+            return symbol;
         }
 
-        public void setName(String name)
+        public void setSymbol(String symbol)
         {
-            this.name = name;
+            this.symbol = symbol;
+        }
+
+        public BigInteger getDecimals()
+        {
+            return decimals;
+        }
+
+        public void setDecimals(BigInteger decimals)
+        {
+            this.decimals = decimals;
         }
     }
 }

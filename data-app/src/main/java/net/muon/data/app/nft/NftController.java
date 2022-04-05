@@ -30,6 +30,7 @@ public class NftController
                              @RequestParam(value = "from", required = false) Long from,
                              @RequestParam(value = "to", required = false) Long to)
     {
+        validateTimestamps(from, to);
         return getOpenseaSource().getPrice(collectionId, tokenId, from, to);
     }
 
@@ -39,7 +40,14 @@ public class NftController
                                        @RequestParam(value = "from", required = false) Long from,
                                        @RequestParam(value = "to", required = false) Long to)
     {
+        validateTimestamps(from, to);
         return getOpenseaSource().getFloorPrice(collectionId, nftId, from, to);
+    }
+
+    private void validateTimestamps(Long from, Long to)
+    {
+        if (from != null && to != null && from >= to)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
     }
 
     private OpenseaSource getOpenseaSource()

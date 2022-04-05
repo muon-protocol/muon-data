@@ -1,21 +1,22 @@
 package net.muon.data.nft;
 
 import com.google.common.base.Strings;
-import net.muon.data.core.BigDecimals;
 import net.muon.data.core.SubgraphClient;
 
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.muon.data.core.BigDecimals.ETH_IN_WEI;
 
 public class OpenseaSource
 {
+    private static final String ETH_ID = "0x0000000000000000000000000000000000000000";
+    private static final String WETH_ID = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
     private static final int PAGE_SIZE = 1000;
 
     private final URI endpoint;
@@ -51,9 +52,7 @@ public class OpenseaSource
         if (count == 0)
             return null;
 
-        var avg = BigDecimals.divide(BigDecimals.divide(sum, count), ETH_IN_WEI);
-        BigDecimal lastPrice = BigDecimals.divide(latestPrice.getPrice(), ETH_IN_WEI);
-        return new NftPrice(lastPrice, latestPrice.getTimestamp(), avg, count);
+        return new NftPrice(latestPrice, count);
     }
 
     public NftFloorPrice getFloorPrice(String collectionId, BigInteger tokenId, Long fromTimestamp, Long toTimestamp)
@@ -66,24 +65,25 @@ public class OpenseaSource
         if (sales.isEmpty())
             return null;
 
-        SaleData sale = sales.get(0);
-        BigDecimal price = BigDecimals.divide(sale.getPrice(), ETH_IN_WEI);
-        return new NftFloorPrice(price, sale.getTimestamp());
+        return new NftFloorPrice(sales.get(0));
     }
 
     private SalesData fetchTokenPrice(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp, int skip)
     {
-        checkNotNull(collection);
+        checkArgument(!Strings.isNullOrEmpty(collection));
         checkNotNull(tokenId);
-        return fetchSales(collection, tokenId, fromTimestamp, toTimestamp, "timestamp", true, PAGE_SIZE, skip);
+        return fetchSales(collection, tokenId, null, fromTimestamp, toTimestamp, "timestamp", true, PAGE_SIZE, skip);
     }
 
     private SalesData fetchFloorPrice(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp)
     {
-        return fetchSales(collection, tokenId, fromTimestamp, toTimestamp, "price", false, 1, 0);
+        checkArgument(!Strings.isNullOrEmpty(collection));
+        return fetchSales(collection, tokenId, List.of(ETH_ID, WETH_ID), fromTimestamp, toTimestamp, "price", false, 1, 0);
     }
 
-    private SalesData fetchSales(String collection, BigInteger tokenId, Long fromTimestamp, Long toTimestamp,
+    private SalesData fetchSales(String collection, BigInteger tokenId,
+                                 List<String> paymentTokenIds,
+                                 Long fromTimestamp, Long toTimestamp,
                                  String order, Boolean desc, Integer limit, Integer offset)
     {
         List<String> filters = new ArrayList<>();
@@ -91,6 +91,10 @@ public class OpenseaSource
             filters.add(String.format("collection: \"%s\"", collection.toLowerCase()));
         if (tokenId != null)
             filters.add(String.format("tokenId: \"%s\"", tokenId));
+        if (paymentTokenIds != null && !paymentTokenIds.isEmpty()) {
+            String tokens = paymentTokenIds.stream().map(id -> String.format("\"%s\"", id)).collect(Collectors.joining(","));
+            filters.add(String.format("paymentToken_in: [%s]", tokens));
+        }
         filters.addAll(getTimestampFilters(fromTimestamp, toTimestamp));
 
         List<String> criteria = new ArrayList<>();
@@ -111,7 +115,8 @@ public class OpenseaSource
                 "       timestamp\n" +
                 "       price\n" +
                 "       paymentToken {\n" +
-                "           name\n" +
+                "           symbol\n" +
+                "           decimals\n" +
                 "       }\n" +
                 "       usdtPrice\n" +
                 "   }\n" +

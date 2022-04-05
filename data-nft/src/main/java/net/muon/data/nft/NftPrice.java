@@ -1,46 +1,55 @@
 package net.muon.data.nft;
 
+import net.muon.data.core.BigDecimals;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 
 public class NftPrice
 {
-    private final BigDecimal latestPrice;
-    private final Long latestPriceTime;
-//    private final String latestPriceToken;
-    private final BigDecimal averagePrice;
-    private final Integer count;
+    private final BigDecimal lastSalePrice;
+    private final String lastSaleToken;
+    private final BigDecimal lastSaleUsdtPrice;
+    private final Long lastSaleTime;
+    private final Integer totalSales;
 
-    public NftPrice(BigDecimal latestPrice, Long latestPriceTime, BigDecimal averagePrice, Integer count)
+    public NftPrice(SaleData lastSale, Integer totalSales)
     {
-        this.latestPrice = latestPrice;
-        this.latestPriceTime = latestPriceTime;
-        this.averagePrice = averagePrice;
-        this.count = count;
+        var paymentToken = lastSale.getPaymentToken();
+        this.lastSalePrice = BigDecimals.divideByScale(lastSale.getPrice(), paymentToken.getDecimals());
+        this.lastSaleToken = paymentToken.getSymbol();
+        this.lastSaleUsdtPrice = BigDecimals.divideByScale(lastSale.getUsdtPrice(), 6);
+        this.lastSaleTime = lastSale.getTimestamp();
+        this.totalSales = totalSales;
     }
 
-    public BigDecimal getLatestPrice()
+    public BigDecimal getLastSalePrice()
     {
-        return latestPrice;
+        return lastSalePrice;
     }
 
-    public Long getLatestPriceTime()
+    public String getLastSaleToken()
     {
-        return latestPriceTime;
+        return lastSaleToken;
     }
 
-    public Instant getFormattedLatestPriceTime()
+    public BigDecimal getLastSaleUsdtPrice()
     {
-        return Instant.ofEpochSecond(latestPriceTime);
+        return lastSaleUsdtPrice;
     }
 
-    public BigDecimal getAveragePrice()
+    public Long getLastSaleTime()
     {
-        return averagePrice;
+        return lastSaleTime;
     }
 
-    public Integer getCount()
+    public Instant getFormattedLastSaleTime()
     {
-        return count;
+        return Instant.ofEpochSecond(lastSaleTime);
+    }
+
+    public Integer getTotalSales()
+    {
+        return totalSales;
     }
 }
