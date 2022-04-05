@@ -8,7 +8,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -17,8 +16,6 @@ import java.util.stream.Collectors;
 @Service
 public class CryptoTokenService
 {
-    private static final MathContext PRECISION = new MathContext(5);
-
     private final Map<Exchange, AbstractWsSource> websocketSources = new HashMap<>();
     private final Map<Exchange, AbstractHttpSource> httpSources = new HashMap<>();
     private final Integer ignorePriceIfOlderThanMillis;
@@ -108,7 +105,7 @@ public class CryptoTokenService
             if (ignorePriceIfOlderThanMillis == null || (now.toEpochMilli() - price.getTime()) < ignorePriceIfOlderThanMillis)
                 sum = sum.add(price.getPrice());
 
-        response.setAveragePrice(sum.divide(BigDecimal.valueOf(prices.size()), PRECISION));
+        response.setAveragePrice(BigDecimals.divide(sum, prices.size()));
         return response;
     }
 

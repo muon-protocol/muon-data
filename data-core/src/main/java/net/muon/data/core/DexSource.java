@@ -1,7 +1,6 @@
 package net.muon.data.core;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.net.URI;
 import java.time.Instant;
 import java.util.List;
@@ -9,7 +8,6 @@ import java.util.Map;
 
 public class DexSource extends AbstractHttpSource
 {
-    private static final MathContext PRECISION = new MathContext(5);
     private final URI endpoint;
     private final SubgraphClient subgraphClient;
     private final Map<String, String> tokenAddresses;
@@ -60,9 +58,9 @@ public class DexSource extends AbstractHttpSource
 
         PairData pair = pairs.get(0);
         if (token0PriceRequested)
-            return pair.getReserve1().divide(pair.getReserve0(), PRECISION);
+            return BigDecimals.divide(pair.getReserve1(), pair.getReserve0());
 
-        return pair.getReserve0().divide(pair.getReserve1(), PRECISION);
+        return BigDecimals.divide(pair.getReserve0(), pair.getReserve1());
     }
 
     private static class Result
